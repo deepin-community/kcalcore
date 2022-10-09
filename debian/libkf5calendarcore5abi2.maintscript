@@ -1,0 +1,2 @@
+rm_conffile /etc/xdg/kcalcore.categories 5:5.70.0-2~
+rm_conffile /etc/xdg/kcalcore.renamecategories 5:5.70.0-2~

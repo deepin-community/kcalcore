@@ -1,0 +1,513 @@
+kcalcore (5:5.86.0-1) unstable; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.86.0).
+  * Bump Standards-Version to 4.6.0, no change required.
+
+ -- Norbert Preining <norbert@preining.info>  Mon, 13 Sep 2021 10:50:28 +0900
+
+kcalcore (5:5.85.0-2) unstable; urgency=medium
+
+  * Release to unstable.
+
+ -- Norbert Preining <norbert@preining.info>  Sat, 28 Aug 2021 23:42:45 +0900
+
+kcalcore (5:5.85.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.85.0).
+  * Update list of installed files.
+  * Update symbols.
+
+ -- Norbert Preining <norbert@preining.info>  Mon, 16 Aug 2021 10:38:42 +0900
+
+kcalcore (5:5.83.0-2) unstable; urgency=medium
+
+  * Upload to unstable.
+
+ -- Norbert Preining <norbert@preining.info>  Mon, 16 Aug 2021 11:52:59 +0900
+
+kcalcore (5:5.83.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.83.0).
+  * Update symbols.
+
+ -- Norbert Preining <norbert@preining.info>  Sun, 13 Jun 2021 13:25:31 +0900
+
+kcalcore (5:5.82.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.82.0).
+  * Removed Maximiliano Curia from the uploaders, thanks for your work
+    on the package!
+  * Update DebianABIManager patch.
+
+ -- Norbert Preining <norbert@preining.info>  Sat, 08 May 2021 21:49:58 +0900
+
+kcalcore (5:5.81.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream version (5.81.0)
+  * Bump inter-frameworks dependencies.
+
+ -- Norbert Preining <norbert@preining.info>  Mon, 12 Apr 2021 10:18:17 +0900
+
+kcalcore (5:5.80.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream version (5.80.0)
+  * Bump inter-frameworks dependencies.
+  * Update symbols.
+
+ -- Norbert Preining <norbert@preining.info>  Mon, 15 Mar 2021 15:10:32 +0900
+
+kcalcore (5:5.79.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.79.0).
+
+ -- Norbert Preining <norbert@preining.info>  Tue, 16 Feb 2021 06:45:26 +0900
+
+kcalcore (5:5.78.0-2) unstable; urgency=medium
+
+  * Release to unstable.
+
+ -- Norbert Preining <norbert@preining.info>  Sun, 17 Jan 2021 12:02:19 +0900
+
+kcalcore (5:5.78.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * New upstream release (5.78.0).
+  * Update build-deps and deps with the info from cmake.
+
+ -- Norbert Preining <norbert@preining.info>  Wed, 13 Jan 2021 10:32:40 +0900
+
+kcalcore (5:5.77.0-2) unstable; urgency=medium
+
+  * Release to unstable.
+
+ -- Norbert Preining <norbert@preining.info>  Tue, 22 Dec 2020 10:33:33 +0900
+
+kcalcore (5:5.77.0-1) experimental; urgency=medium
+
+  [ Norbert Preining ]
+  * Bump Standards-Version to 4.5.1 (No changes needed).
+  * New upstream release (5.77.0).
+  * Update build-deps and deps with the info from cmake.
+  * Add myself to Uploaders.
+  * Update maintainer to Debian Qt/KDE Maintainers.
+  * Update symbols.
+  * Update lintian overrides.
+
+ -- Norbert Preining <norbert@preining.info>  Fri, 18 Dec 2020 10:03:52 +0900
+
+kcalcore (5:5.74.0-2) unstable; urgency=medium
+
+  * Team upload to unstable.
+
+ -- Sandro Knauß <hefee@debian.org>  Mon, 19 Oct 2020 23:12:33 +0200
+
+kcalcore (5:5.74.0-1) experimental; urgency=medium
+
+  [ Sandro Knauß ]
+  * New upstream release (5.74.0).
+  * Update build-deps and deps with the info from cmake.
+  * Update Homepage link to point to new invent.kde.org
+  * Update repository related entries to metadata file.
+  * Remove obsolete field Name from debian/upstream/metadata (already present in
+    machine-readable debian/copyright).
+  * Update field Source in debian/copyright to invent.kde.org move.
+  * Add Bug-* entries to metadata file.
+
+ -- Sandro Knauß <hefee@debian.org>  Sun, 27 Sep 2020 17:44:56 +0200
+
+kcalcore (5:5.70.0-2) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Pino Toscano ]
+  * Unregister the old /etc/xdg/kcalcore.categories, and
+    /etc/xdg/kcalcore.renamecategories conffiles.
+  * Update symbols file for GCC 10. (Closes: #966930)
+  * Update lintian overrides.
+
+  [ Helmut Grohne ]
+  * Fix FTCBFS: Build-Depends: qttools5-dev. (Closes: #962756)
+
+ -- Pino Toscano <pino@debian.org>  Fri, 28 Aug 2020 12:42:41 +0200
+
+kcalcore (5:5.70.0-1) unstable; urgency=medium
+
+  [ Sandro Knauß ]
+  * Bump compat level to 13.
+  * New upstream release (5.70.0).
+  * Wrap long lines in changelog entries: 4:16.04.1-1.
+  * Set field Upstream-Contact in debian/copyright.
+  * Remove obsolete field Contact from debian/upstream/metadata (already
+    present in machine-readable debian/copyright).
+  * Update build-deps and deps with the info from cmake.
+  * Update Upstream-Name.
+
+ -- Sandro Knauß <hefee@debian.org>  Tue, 26 May 2020 23:56:26 +0200
+
+kcalcore (5:5.69.0-1) experimental; urgency=medium
+
+  [ Sandro Knauß ]
+  * Bump Standards-Version to 4.5.0 (No changes needed).
+  * New upstream release (5.69.0).
+  * Migration to Frameworks.
+  * Bump epoch because Frameworks version schema is 5.X.
+  * Update upstream signing key.
+  * Update build-deps and deps with the info from cmake.
+  * Remove not needed patch.
+  * Update patch hunks.
+  * Use symbols files, as ABI is now stable under Frameworks.
+  * Use default dh for Frameworks build.
+  * Create libkf5calendarcore-doc package.
+  * Add missing file to libkf5calendarcore-dev.
+  * Add lintian overrides for libkf5calendarcore-dev.
+  * Add Rules-Requires-Root: no.
+  * dbgsym-migration was done for stretch and can safely removed now.
+  * Add Build-Depends-Package to symbols file.
+  * Enable hardening all.
+  * Update build-deps and deps with the info from cmake.
+  * Update patch hunks.
+  * Update symbols from build for 5.69.0.
+  * Remove not needed injection of linker flags.
+
+ -- Sandro Knauß <hefee@debian.org>  Thu, 30 Apr 2020 00:56:44 +0200
+
+kcalcore (4:19.08.3-2) unstable; urgency=medium
+
+  [ Sandro Knauß ]
+  * Add fix to bump version.
+
+ -- Sandro Knauß <hefee@debian.org>  Sun, 01 Dec 2019 00:09:14 +0100
+
+kcalcore (4:19.08.3-1) unstable; urgency=medium
+
+  [ Sandro Knauß ]
+  * New upstream release (19.08.3).
+
+ -- Sandro Knauß <hefee@debian.org>  Sat, 30 Nov 2019 22:54:18 +0100
+
+kcalcore (4:19.08.2-1) experimental; urgency=medium
+
+  [ Sandro Knauß ]
+  * Bump Standards-Version to 4.4.1 (No changes needed).
+  * New upstream release (19.08.2).
+  * Update build-deps and deps with the info from cmake.
+  * Update patch hunks.
+  * Update install files for new upstream release.
+  * install files got renamed KCalCore -> KCalendarCore.
+
+ -- Sandro Knauß <hefee@debian.org>  Fri, 08 Nov 2019 10:39:04 +0100
+
+kcalcore (4:18.08.3-3) unstable; urgency=medium
+
+  * Release to unstable.
+
+ -- Sandro Knauß <hefee@debian.org>  Thu, 14 Nov 2019 23:48:03 +0100
+
+kcalcore (4:18.08.3-2) experimental; urgency=medium
+
+  [ Sandro Knauß ]
+  * Use virtual packages to bundle kdepim.
+  * Bump to Compat v12 (no changes needed).
+  * Remove not needed break rules (as the versions are already in
+    stable).
+  * Bump Standards-Version to 4.4.0 (No changes needed).
+  * Add myself to Uploaders.
+
+ -- Sandro Knauß <hefee@debian.org>  Tue, 24 Sep 2019 00:21:22 +0200
+
+kcalcore (4:18.08.3-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * New upstream release (18.08.3).
+  * Bump Standards-Version to 4.3.0 (No changes needed).
+  * Removed acc autopkgtest.
+  * Removed testsuite autopkgtest.
+
+ -- Sandro Knauß <hefee@debian.org>  Mon, 04 Feb 2019 15:56:35 +0100
+
+kcalcore (4:18.08.1-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * Bump Standards-Version to 4.2.1 (No changes needed).
+  * Follow stable releases in KDE again.
+  * New upstream release (18.08.1).
+
+ -- Sandro Knauß <hefee@debian.org>  Tue, 02 Oct 2018 23:17:36 +0200
+
+kcalcore (4:18.07.90-1) experimental; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * New upstream release (18.07.90).
+  * Bump Standards-Version to 4.2.0 (No changes needed).
+  * Update watch file to match unstable releases, too
+  * Update build-deps and deps with the info from cmake
+  * Update copyright file for new upstream.
+  * Bump Debian-ABI for libkf5calendarcore5 because of ABI breakage to 2.
+  * Update patch hunks.
+
+ -- Sandro Knauß <hefee@debian.org>  Thu, 16 Aug 2018 11:00:08 +0200
+
+kcalcore (4:17.12.3-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * New upstream release (17.12.3).
+
+ -- Sandro Knauß <hefee@debian.org>  Sat, 31 Mar 2018 18:23:34 +0200
+
+kcalcore (4:17.12.2-2) experimental; urgency=medium
+
+  * Team upload.
+  * Switch build & runtime dependencies back from libical2-dev to libical-dev,
+    as kcalcore does support libical3 now.
+  * Update the dependencies of libkf5calendarcore-dev:
+    - remove libical-dev, since it is not a public requirement anymore
+    - add qtbase5-dev, as the headers use Qt
+  * Small changes in copyright.
+  * Simplify watch file, and switch it to https.
+
+ -- Pino Toscano <pino@debian.org>  Tue, 20 Mar 2018 07:23:39 +0100
+
+kcalcore (4:17.12.2-1) experimental; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * New upstream release (17.12.2).
+  * Update build-deps and deps with the info from cmake
+  * Use DebianABIManager to handle libkf5calendarcore5 properly
+  * Update library from libkf5calendarcore5 -> libkf5calendarcore5abi1,
+    because of ABI breakage.
+  * Bump Standards-Version 4.1.3 (no changes needed).
+  * Cleanup Build-Dependencies.
+  * Update Vcs links to salsa.
+  * Bump debhelper build-dep and compat to 11.
+
+ -- Sandro Knauß <hefee@debian.org>  Fri, 09 Mar 2018 15:13:55 +0100
+
+kcalcore (4:17.08.3-1) unstable; urgency=medium
+
+  * Team upload.
+
+  [ Sandro Knauß ]
+  * New upstream release (17.08.3).
+  * Add Mulit-Arch hints for libkf5calendarcore-dev.
+  * Bump Standards-Version to 4.1.2 (No changes needed).
+  * Bump debhelper build-dep and compat to 10.
+
+  [ Pino Toscano ]
+  * Merge changes from 4:16.04.2-2:
+    - upstream_Port-away-from-qt_qhash_seed-which-is-going-away-in-.patch:
+      drop, backported from upstream
+
+ -- Sandro Knauß <hefee@debian.org>  Thu, 21 Dec 2017 17:52:57 +0100
+
+kcalcore (4:17.08.0-1) experimental; urgency=medium
+
+  * New upstream release (17.08.0)
+  * Bump Standards-Version to 4.0.1.
+  * Update upstream metadata
+  * Update build-deps and deps with the info from cmake
+  * Update symbols files
+  * Bump group breaks (17.08)
+  * Release to experimental
+
+ -- Maximiliano Curia <maxy@debian.org>  Fri, 01 Sep 2017 22:12:49 +0200
+
+kcalcore (4:17.08.0-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Thu, 17 Aug 2017 09:34:16 +0000
+
+kcalcore (4:17.04.3-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 12 Jul 2017 10:19:47 +0000
+
+kcalcore (4:17.04.2-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 07 Jun 2017 12:20:54 +0000
+
+kcalcore (4:17.04.1-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Thu, 11 May 2017 18:13:39 +0000
+
+kcalcore (4:17.04.0-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 19 Apr 2017 13:03:25 +0000
+
+kcalcore (4:16.12.3-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 08 Mar 2017 13:47:26 +0000
+
+kcalcore (4:16.12.2-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 08 Feb 2017 16:57:13 +0000
+
+kcalcore (4:16.12.1-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 11 Jan 2017 13:15:58 +0000
+
+kcalcore (4:16.12.0-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 14 Dec 2016 16:25:34 +0000
+
+kcalcore (4:16.08.3-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Mon, 21 Nov 2016 13:52:39 +0000
+
+kcalcore (4:16.08.2-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Fri, 14 Oct 2016 13:39:18 +0000
+
+kcalcore (4:16.08.1-1~1.gbpa75d99) UNRELEASED; urgency=medium
+
+  ** SNAPSHOT build @a75d992f344069ccb845dd4d10a15e605963b7a0 **
+
+  [ Maximiliano Curia ]
+  ** SNAPSHOT build @562fa1569d19fa7994ef4ca46a1e8e2600fca9a8 **
+
+  * UNRELEASED
+
+  [ Automatic packaging ]
+  * Update build-deps and deps with the info from cmake
+  * Update symbols files
+  * UNRELEASED
+
+ -- Automatic packaging <jenkins@gnuservers.com.ar>  Fri, 09 Sep 2016 00:33:35 +0200
+
+kcalcore (4:16.08.1-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Fri, 16 Sep 2016 13:05:41 +0000
+
+kcalcore (4:16.08.0-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 17 Aug 2016 11:48:12 +0000
+
+kcalcore (4:16.07.80-0neon) xenial; urgency=medium
+
+  * New release
+
+ -- Neon CI <neon@kde.org>  Wed, 27 Jul 2016 16:39:03 +0000
+
+kcalcore (4:16.04.2-2) unstable; urgency=medium
+
+  * Team upload.
+  * Switch build & runtime dependencies from libical-dev to libical2-dev:
+    kcalcore does not support libical3 yet, so use libical2 for now.
+    (Closes: #883960)
+  * Backport upstream commit 93b2da839a298aab705c1865ee65e009aef53a55 to fix
+    build with Qt >= 5.9; patch
+    upstream_Port-away-from-qt_qhash_seed-which-is-going-away-in-.patch.
+    (Closes: #877313)
+
+ -- Pino Toscano <pino@debian.org>  Tue, 12 Dec 2017 20:22:28 +0100
+
+kcalcore (4:16.04.2-1) unstable; urgency=medium
+
+  * New upstream release.
+
+ -- Maximiliano Curia <maxy@debian.org>  Tue, 21 Jun 2016 11:08:08 +0200
+
+kcalcore (4:16.04.1-1) unstable; urgency=medium
+
+  [ Automatic packaging ]
+  * Bump Standards-Version to 3.9.8
+  * Add a .gitattributes file to use dpkg-mergechangelogs
+  * Update build-deps and deps with the info from cmake
+  * Update symbols files.
+
+  [ Maximiliano Curia ]
+  * New upstream release (15.12.2).
+  * Replace the "Historical name" ddeb-migration by its "Modern, clearer"
+    replacement dbgsym-migration.
+  * Add upstream metadata (DEP-12)
+  * debian/control: Update Vcs-Browser and Vcs-Git fields
+  * Update install files
+
+ -- Maximiliano Curia <maxy@debian.org>  Sat, 28 May 2016 01:32:56 +0200
+
+kcalcore (4:15.12.0-1) experimental; urgency=medium
+
+  * New upstream release (15.12.0).
+
+ -- Maximiliano Curia <maxy@debian.org>  Mon, 01 Feb 2016 10:24:32 +0100
+
+kcalcore (4:15.08.2-1) experimental; urgency=medium
+
+  * New upstream release (15.08.2).
+
+ -- Maximiliano Curia <maxy@debian.org>  Fri, 16 Oct 2015 08:07:12 +0200
+
+kcalcore (4:15.08.1-1) experimental; urgency=medium
+
+  * New upstream release (15.08.1).
+  * Removed private classes from exported symbols.
+
+ -- Maximiliano Curia <maxy@debian.org>  Sat, 19 Sep 2015 03:16:27 +0200
+
+kcalcore (4:15.08.0-1) experimental; urgency=medium
+
+  * Initial Debian release.
+
+ -- Maximiliano Curia <maxy@debian.org>  Tue, 08 Sep 2015 00:44:51 +0200
+
+kcalcore (4:15.08.0-0ubuntu1) wily; urgency=medium
+
+  * new upstream release
+
+ -- Clive Johnston <clivejo@aol.com>  Wed, 26 Aug 2015 17:10:25 +0100
+
+kcalcore (4:15.07.90-0ubuntu2) wily; urgency=medium
+
+  * Launchpad requires an epoch
+
+ -- Jonathan Riddell <jriddell@ubuntu.com>  Wed, 19 Aug 2015 14:40:40 +0100
+
+kcalcore (15.07.90-0ubuntu1) wily; urgency=medium
+
+  [ Harald Sitter ]
+  * Initial release.
+
+  [ Jonathan Riddell ]
+  * new upstream beta release
+
+ -- Jonathan Riddell <jriddell@ubuntu.com>  Tue, 18 Aug 2015 09:37:06 +0100

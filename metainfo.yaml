@@ -1,0 +1,17 @@
+maintainer: winterz
+description: The KDE calendar access library
+tier: 1
+type: functional
+platforms:
+    - name: All
+portingAid: false
+deprecated: false
+libraries:
+ - qmake: KCalendarCore
+ - cmake: "KF5::CalendarCore"
+cmakename: KF5CalendarCore
+
+public_lib: true
+group: Frameworks
+subgroup: Tier 1
+release: true
