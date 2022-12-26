@@ -8,42 +8,84 @@ set_target_properties(KF5CalendarCore PROPERTIES
 )
 
 target_sources(KF5CalendarCore PRIVATE
-  alarm.cpp
-  attachment.cpp
-  attendee.cpp
-  calendar.cpp
-  calendarplugin.cpp
-  calfilter.cpp
-  calformat.cpp
-  calstorage.cpp
-  compat.cpp
-  conference.cpp
-  customproperties.cpp
-  duration.cpp
-  event.cpp
-  exceptions.cpp
-  filestorage.cpp
-  freebusy.cpp
-  freebusycache.cpp
-  freebusyperiod.cpp
-  icalformat.cpp
-  icalformat_p.cpp
-  icaltimezones.cpp
-  incidence.cpp
-  incidencebase.cpp
-  journal.cpp
-  memorycalendar.cpp
-  occurrenceiterator.cpp
-  period.cpp
-  person.cpp
-  recurrence.cpp
-  recurrencerule.cpp
-  schedulemessage.cpp
-  sorting.cpp
-  todo.cpp
-  utils.cpp
-  vcalformat.cpp
-  visitor.cpp
+    alarm.cpp
+    alarm.h
+    attachment.cpp
+    attachment.h
+    attendee.cpp
+    attendee.h
+    calendar.cpp
+    calendar.h
+    calendar_p.h
+    calendarplugin.cpp
+    calendarplugin.h
+    calfilter.cpp
+    calfilter.h
+    calformat.cpp
+    calformat.h
+    calstorage.cpp
+    calstorage.h
+    compat.cpp
+    compat_p.h
+    conference.cpp
+    conference.h
+    customproperties.cpp
+    customproperties.h
+    duration.cpp
+    duration.h
+    event.cpp
+    event.h
+    exceptions.cpp
+    exceptions.h
+    filestorage.cpp
+    filestorage.h
+    freebusycache.cpp
+    freebusycache.h
+    freebusy.cpp
+    freebusy.h
+    freebusyperiod.cpp
+    freebusyperiod.h
+    icalformat.cpp
+    icalformat.h
+    icalformat_p.cpp
+    icalformat_p.h
+    icaltimezones.cpp
+    icaltimezones_p.h
+    incidencebase.cpp
+    incidencebase.h
+    incidencebase_p.h
+    incidence.cpp
+    incidence.h
+    incidence_p.h
+    journal.cpp
+    journal.h
+    memorycalendar.cpp
+    memorycalendar.h
+    occurrenceiterator.cpp
+    occurrenceiterator.h
+    period.cpp
+    period.h
+    person.cpp
+    person.h
+    person_p.h
+    recurrence.cpp
+    recurrence.h
+    recurrencehelper_p.h
+    recurrencerule.cpp
+    recurrencerule.h
+    schedulemessage.cpp
+    schedulemessage.h
+    sorting.cpp
+    sorting.h
+    todo.cpp
+    todo.h
+    utils.cpp
+    utils_p.h
+    vcalformat.cpp
+    vcalformat.h
+    visitor.cpp
+    visitor.h
+
 )
 ecm_qt_declare_logging_category(KF5CalendarCore
     HEADER kcalendarcore_debug.h
@@ -59,7 +101,7 @@ ecm_generate_export_header(KF5CalendarCore
     GROUP_BASE_NAME KF
     VERSION ${KF_VERSION}
     DEPRECATED_BASE_VERSION 0
-    DEPRECATION_VERSIONS 5.64
+    DEPRECATION_VERSIONS 5.64 5.89
     EXCLUDE_DEPRECATED_BEFORE_AND_AT ${EXCLUDE_DEPRECATED_BEFORE_AND_AT}
 )
 
@@ -69,13 +111,13 @@ if (NOT KCALENDARCORE_NO_DEPRECATED_NAMESPACE)
     target_compile_definitions(KF5CalendarCore INTERFACE "-DKCalCore=KCalendarCore")
 endif()
 
-target_include_directories(KF5CalendarCore INTERFACE "$<INSTALL_INTERFACE:${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore>")
+target_include_directories(KF5CalendarCore INTERFACE "$<INSTALL_INTERFACE:${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore>")
 target_include_directories(KF5CalendarCore PUBLIC "$<BUILD_INTERFACE:${KCalendarCore_SOURCE_DIR}/src;${KCalendarCore_BINARY_DIR}/src>")
 
 target_link_libraries(KF5CalendarCore
 PUBLIC
-    Qt5::Core
-    Qt5::Gui
+    Qt${QT_MAJOR_VERSION}::Core
+    Qt${QT_MAJOR_VERSION}::Gui
 PRIVATE
     LibIcal
 )
@@ -139,13 +181,13 @@ endif()
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/kcalendarcore_export.h
   ${KCalendarCore_HEADERS}
-  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/kcalendarcore
+  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/kcalendarcore
   COMPONENT Devel
 )
 
 install(FILES
   ${KCalendarCore_CamelCase_HEADERS}
-  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/KCalendarCore
+  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/KCalendarCore
   COMPONENT Devel
 )
 
@@ -153,13 +195,13 @@ if (NOT KCALENDARCORE_NO_DEPRECATED_NAMESPACE)
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/kcalendarcore_export.h
     ${KCalCore_HEADERS}
-    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/kcalcore
+    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/kcalcore
     COMPONENT Devel
   )
 
   install(FILES
     ${KCalCore_CamelCase_HEADERS}
-    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/KCalCore
+    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/KCalCore
     COMPONENT Devel
   )
 endif()
@@ -170,7 +212,7 @@ ecm_qt_install_logging_categories(
     DESTINATION ${KDE_INSTALL_LOGGINGCATEGORIESDIR}
 )
 
-ecm_generate_pri_file(BASE_NAME KCalendarCore LIB_NAME KF5CalendarCore DEPS "Core" FILENAME_VAR PRI_FILENAME INCLUDE_INSTALL_DIR ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/KCalendarCore)
+ecm_generate_pri_file(BASE_NAME KCalendarCore LIB_NAME KF5CalendarCore DEPS "Core" FILENAME_VAR PRI_FILENAME INCLUDE_INSTALL_DIR ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/KCalendarCore)
 install(FILES ${PRI_FILENAME} DESTINATION ${ECM_MKSPECS_INSTALL_DIR})
 
 if(BUILD_QCH)

@@ -20,8 +20,12 @@
 */
 
 #include "incidence.h"
+#include "incidence_p.h"
 #include "calformat.h"
+#include "kcalendarcore_debug.h"
 #include "utils_p.h"
+
+#include <math.h>
 
 #include <QStringList>
 #include <QTextDocument> // for .toHtmlEscaped() and Qt::mightBeRichText()
@@ -30,147 +34,92 @@
 
 using namespace KCalendarCore;
 
-/**
-  Private class that helps to provide binary compatibility between releases.
-  @internal
-*/
-//@cond PRIVATE
-class Q_DECL_HIDDEN KCalendarCore::Incidence::Private
+IncidencePrivate::IncidencePrivate() = default;
+
+IncidencePrivate::IncidencePrivate(const IncidencePrivate &p)
+    : mCreated(p.mCreated)
+    , mDescription(p.mDescription)
+    , mSummary(p.mSummary)
+    , mLocation(p.mLocation)
+    , mCategories(p.mCategories)
+    , mResources(p.mResources)
+    , mStatusString(p.mStatusString)
+    , mSchedulingID(p.mSchedulingID)
+    , mRelatedToUid(p.mRelatedToUid)
+    , mRecurrenceId(p.mRecurrenceId)
+    , mConferences(p.mConferences)
+    , mGeoLatitude(p.mGeoLatitude)
+    , mGeoLongitude(p.mGeoLongitude)
+    , mRecurrence(nullptr)
+    , mRevision(p.mRevision)
+    , mPriority(p.mPriority)
+    , mStatus(p.mStatus)
+    , mSecrecy(p.mSecrecy)
+    , mColor(p.mColor)
+    , mDescriptionIsRich(p.mDescriptionIsRich)
+    , mSummaryIsRich(p.mSummaryIsRich)
+    , mLocationIsRich(p.mLocationIsRich)
+    , mThisAndFuture(p.mThisAndFuture)
+    , mLocalOnly(false)
 {
-public:
-    Private()
-        : mGeoLatitude(INVALID_LATLON)
-        , mGeoLongitude(INVALID_LATLON)
-        , mRecurrence(nullptr)
-        , mRevision(0)
-        , mPriority(0)
-        , mStatus(StatusNone)
-        , mSecrecy(SecrecyPublic)
-        , mDescriptionIsRich(false)
-        , mSummaryIsRich(false)
-        , mLocationIsRich(false)
-        , mHasGeo(false)
-        , mThisAndFuture(false)
-        , mLocalOnly(false)
-    {
+}
+
+void IncidencePrivate::clear()
+{
+    mAlarms.clear();
+    mAttachments.clear();
+    delete mRecurrence;
+    mRecurrence = nullptr;
+}
+
+void IncidencePrivate::init(Incidence *q, const IncidencePrivate &other)
+{
+    mRevision = other.mRevision;
+    mCreated = other.mCreated;
+    mDescription = other.mDescription;
+    mDescriptionIsRich = other.mDescriptionIsRich;
+    mSummary = other.mSummary;
+    mSummaryIsRich = other.mSummaryIsRich;
+    mCategories = other.mCategories;
+    mRelatedToUid = other.mRelatedToUid;
+    mResources = other.mResources;
+    mStatusString = other.mStatusString;
+    mStatus = other.mStatus;
+    mSecrecy = other.mSecrecy;
+    mPriority = other.mPriority;
+    mLocation = other.mLocation;
+    mLocationIsRich = other.mLocationIsRich;
+    mGeoLatitude = other.mGeoLatitude;
+    mGeoLongitude = other.mGeoLongitude;
+    mRecurrenceId = other.mRecurrenceId;
+    mConferences = other.mConferences;
+    mThisAndFuture = other.mThisAndFuture;
+    mLocalOnly = other.mLocalOnly;
+    mColor = other.mColor;
+
+    // Alarms and Attachments are stored in ListBase<...>, which is a QValueList<...*>.
+    // We need to really duplicate the objects stored therein, otherwise deleting
+    // i will also delete all attachments from this object (setAutoDelete...)
+    mAlarms.reserve(other.mAlarms.count());
+    for (const Alarm::Ptr &alarm : qAsConst(other.mAlarms)) {
+        Alarm::Ptr b(new Alarm(*alarm.data()));
+        b->setParent(q);
+        mAlarms.append(b);
     }
 
-    Private(const Private &p)
-        : mCreated(p.mCreated)
-        , mDescription(p.mDescription)
-        , mSummary(p.mSummary)
-        , mLocation(p.mLocation)
-        , mCategories(p.mCategories)
-        , mResources(p.mResources)
-        , mStatusString(p.mStatusString)
-        , mSchedulingID(p.mSchedulingID)
-        , mRelatedToUid(p.mRelatedToUid)
-        , mRecurrenceId(p.mRecurrenceId)
-        , mConferences(p.mConferences)
-        , mGeoLatitude(p.mGeoLatitude)
-        , mGeoLongitude(p.mGeoLongitude)
-        , mRecurrence(nullptr)
-        , mRevision(p.mRevision)
-        , mPriority(p.mPriority)
-        , mStatus(p.mStatus)
-        , mSecrecy(p.mSecrecy)
-        , mColor(p.mColor)
-        , mDescriptionIsRich(p.mDescriptionIsRich)
-        , mSummaryIsRich(p.mSummaryIsRich)
-        , mLocationIsRich(p.mLocationIsRich)
-        , mHasGeo(p.mHasGeo)
-        , mThisAndFuture(p.mThisAndFuture)
-        , mLocalOnly(false)
-    {
-    }
-
-    void clear()
-    {
-        mAlarms.clear();
-        mAttachments.clear();
-        delete mRecurrence;
+    mAttachments = other.mAttachments;
+    if (other.mRecurrence) {
+        mRecurrence = new Recurrence(*(other.mRecurrence));
+        mRecurrence->addObserver(q);
+    } else {
         mRecurrence = nullptr;
     }
-
-    void init(Incidence *dest, const Incidence &src)
-    {
-        mRevision = src.d->mRevision;
-        mCreated = src.d->mCreated;
-        mDescription = src.d->mDescription;
-        mDescriptionIsRich = src.d->mDescriptionIsRich;
-        mSummary = src.d->mSummary;
-        mSummaryIsRich = src.d->mSummaryIsRich;
-        mCategories = src.d->mCategories;
-        mRelatedToUid = src.d->mRelatedToUid;
-        mResources = src.d->mResources;
-        mStatusString = src.d->mStatusString;
-        mStatus = src.d->mStatus;
-        mSecrecy = src.d->mSecrecy;
-        mPriority = src.d->mPriority;
-        mLocation = src.d->mLocation;
-        mLocationIsRich = src.d->mLocationIsRich;
-        mGeoLatitude = src.d->mGeoLatitude;
-        mGeoLongitude = src.d->mGeoLongitude;
-        mHasGeo = src.d->mHasGeo;
-        mRecurrenceId = src.d->mRecurrenceId;
-        mConferences = src.d->mConferences;
-        mThisAndFuture = src.d->mThisAndFuture;
-        mLocalOnly = src.d->mLocalOnly;
-        mColor = src.d->mColor;
-
-        // Alarms and Attachments are stored in ListBase<...>, which is a QValueList<...*>.
-        // We need to really duplicate the objects stored therein, otherwise deleting
-        // i will also delete all attachments from this object (setAutoDelete...)
-        mAlarms.reserve(src.d->mAlarms.count());
-        for (const Alarm::Ptr &alarm : qAsConst(src.d->mAlarms)) {
-            Alarm::Ptr b(new Alarm(*alarm.data()));
-            b->setParent(dest);
-            mAlarms.append(b);
-        }
-
-        mAttachments = src.d->mAttachments;
-        if (src.d->mRecurrence) {
-            mRecurrence = new Recurrence(*(src.d->mRecurrence));
-            mRecurrence->addObserver(dest);
-        } else {
-            mRecurrence = nullptr;
-        }
-    }
-
-    QDateTime mCreated; // creation datetime
-    QString mDescription; // description string
-    QString mSummary; // summary string
-    QString mLocation; // location string
-    QStringList mCategories; // category list
-    Attachment::List mAttachments; // attachments list
-    Alarm::List mAlarms; // alarms list
-    QStringList mResources; // resources list (not calendar resources)
-    QString mStatusString; // status string, for custom status
-    QString mSchedulingID; // ID for scheduling mails
-    QMap<RelType, QString> mRelatedToUid; // incidence uid this is related to, for each relType
-    QDateTime mRecurrenceId; // recurrenceId
-    Conference::List mConferences; // conference list
-
-    float mGeoLatitude; // Specifies latitude in decimal degrees
-    float mGeoLongitude; // Specifies longitude in decimal degrees
-    mutable Recurrence *mRecurrence; // recurrence
-    int mRevision; // revision number
-    int mPriority; // priority: 1 = highest, 2 = less, etc.
-    Status mStatus; // status
-    Secrecy mSecrecy; // secrecy
-    QString mColor; // background color
-    bool mDescriptionIsRich = false; // description string is richtext.
-    bool mSummaryIsRich = false; // summary string is richtext.
-    bool mLocationIsRich = false; // location string is richtext.
-    bool mHasGeo = false; // if incidence has geo data
-    bool mThisAndFuture = false;
-    bool mLocalOnly = false; // allow changes that won't go to the server
-};
+}
 //@endcond
 
 Incidence::Incidence()
     : IncidenceBase()
-    , d(new KCalendarCore::Incidence::Private)
+    , d(new KCalendarCore::IncidencePrivate)
 {
     recreate();
     resetDirtyFields();
@@ -179,9 +128,9 @@ Incidence::Incidence()
 Incidence::Incidence(const Incidence &i)
     : IncidenceBase(i)
     , Recurrence::RecurrenceObserver()
-    , d(new KCalendarCore::Incidence::Private(*i.d))
+    , d(new KCalendarCore::IncidencePrivate(*i.d))
 {
-    d->init(this, i);
+    d->init(this, *i.d);
     resetDirtyFields();
 }
 
@@ -211,7 +160,7 @@ IncidenceBase &Incidence::assign(const IncidenceBase &other)
         // TODO: should relations be cleared out, as in destructor???
         IncidenceBase::assign(other);
         const Incidence *i = static_cast<const Incidence *>(&other);
-        d->init(this, *i);
+        d->init(this, *(i->d));
     }
 
     return *this;
@@ -226,40 +175,33 @@ bool Incidence::equals(const IncidenceBase &incidence) const
     // If they weren't the same type IncidenceBase::equals would had returned false already
     const Incidence *i2 = static_cast<const Incidence *>(&incidence);
 
-    const auto alarmList = alarms();
-    const auto otherAlarmsList = i2->alarms();
+    const Alarm::List alarmList = alarms();
+    const Alarm::List otherAlarmsList = i2->alarms();
     if (alarmList.count() != otherAlarmsList.count()) {
         return false;
     }
 
-    Alarm::List::ConstIterator a1 = alarmList.constBegin();
-    Alarm::List::ConstIterator a1end = alarmList.constEnd();
-    Alarm::List::ConstIterator a2 = otherAlarmsList.constBegin();
-    Alarm::List::ConstIterator a2end = otherAlarmsList.constEnd();
-    for (; a1 != a1end && a2 != a2end; ++a1, ++a2) {
-        if (**a1 == **a2) {
-            continue;
-        } else {
-            return false;
-        }
+    auto matchFunc = [](const Alarm::Ptr &a, const Alarm::Ptr &b) {
+        return *a == *b;
+    };
+
+    const auto [it1, it2] = std::mismatch(alarmList.cbegin(), alarmList.cend(), otherAlarmsList.cbegin(), otherAlarmsList.cend(), matchFunc);
+    // Checking the iterator from one list only, since both lists are the same size
+    if (it1 != alarmList.cend()) {
+        return false;
     }
 
-    const auto attachmentList = attachments();
-    const auto otherAttachmentList = i2->attachments();
+    const Attachment::List attachmentList = attachments();
+    const Attachment::List otherAttachmentList = i2->attachments();
     if (attachmentList.count() != otherAttachmentList.count()) {
         return false;
     }
 
-    Attachment::List::ConstIterator att1 = attachmentList.constBegin();
-    const Attachment::List::ConstIterator att1end = attachmentList.constEnd();
-    Attachment::List::ConstIterator att2 = otherAttachmentList.constBegin();
-    const Attachment::List::ConstIterator att2end = otherAttachmentList.constEnd();
-    for (; att1 != att1end && att2 != att2end; ++att1, ++att2) {
-        if (*att1 == *att2) {
-            continue;
-        } else {
-            return false;
-        }
+    const auto [at1, at2] = std::mismatch(attachmentList.cbegin(), attachmentList.cend(), otherAttachmentList.cbegin(), otherAttachmentList.cend());
+
+    // Checking the iterator from one list only, since both lists are the same size
+    if (at1 != attachmentList.cend()) {
+        return false;
     }
 
     bool recurrenceEqual = (d->mRecurrence == nullptr && i2->d->mRecurrence == nullptr);
@@ -269,11 +211,7 @@ bool Incidence::equals(const IncidenceBase &incidence) const
         recurrenceEqual = d->mRecurrence != nullptr && i2->d->mRecurrence != nullptr && *d->mRecurrence == *i2->d->mRecurrence;
     }
 
-    if (d->mHasGeo == i2->d->mHasGeo) {
-        if (d->mHasGeo && (!qFuzzyCompare(d->mGeoLatitude, i2->d->mGeoLatitude) || !qFuzzyCompare(d->mGeoLongitude, i2->d->mGeoLongitude))) {
-            return false;
-        }
-    } else {
+    if (!qFuzzyCompare(d->mGeoLatitude, i2->d->mGeoLatitude) || !qFuzzyCompare(d->mGeoLongitude, i2->d->mGeoLongitude)) {
         return false;
     }
     // clang-format off
@@ -364,14 +302,13 @@ void Incidence::setCreated(const QDateTime &created)
         return;
     }
 
+    update();
     d->mCreated = created.toUTC();
     const auto ct = d->mCreated.time();
     // Remove milliseconds
     d->mCreated.setTime(QTime(ct.hour(), ct.minute(), ct.second()));
     setFieldDirty(FieldCreated);
-
-    // FIXME: Shouldn't we call updated for the creation date, too?
-    //  updated();
+    updated();
 }
 
 QDateTime Incidence::created() const
@@ -386,7 +323,6 @@ void Incidence::setRevision(int rev)
     }
 
     update();
-
     d->mRevision = rev;
     setFieldDirty(FieldRevision);
     updated();
@@ -411,8 +347,13 @@ void Incidence::shiftTimes(const QTimeZone &oldZone, const QTimeZone &newZone)
     if (d->mRecurrence) {
         d->mRecurrence->shiftTimes(oldZone, newZone);
     }
-    for (int i = 0, end = d->mAlarms.count(); i < end; ++i) {
-        d->mAlarms[i]->shiftTimes(oldZone, newZone);
+    if (d->mAlarms.count() > 0) {
+        update();
+        for (auto alarm : d->mAlarms) {
+            alarm->shiftTimes(oldZone, newZone);
+        }
+        setFieldDirty(FieldAlarms);
+        updated();
     }
 }
 
@@ -498,6 +439,7 @@ void Incidence::setCategories(const QStringList &categories)
 
     update();
     d->mCategories = categories;
+    setFieldDirty(FieldCategories);
     updated();
 }
 
@@ -518,9 +460,8 @@ void Incidence::setCategories(const QString &catStr)
 
     d->mCategories = catStr.split(QLatin1Char(','));
 
-    QStringList::Iterator it;
-    for (it = d->mCategories.begin(); it != d->mCategories.end(); ++it) {
-        *it = (*it).trimmed();
+    for (auto &category : d->mCategories) {
+        category = category.trimmed();
     }
 
     updated();
@@ -729,16 +670,15 @@ void Incidence::addAttachment(const Attachment &attachment)
 
 void Incidence::deleteAttachments(const QString &mime)
 {
-    Attachment::List result;
-    Attachment::List::Iterator it = d->mAttachments.begin();
-    while (it != d->mAttachments.end()) {
-        if ((*it).mimeType() != mime) {
-            result += *it;
-        }
-        ++it;
+    auto it = std::remove_if(d->mAttachments.begin(), d->mAttachments.end(), [&mime](const Attachment &a) {
+        return a.mimeType() == mime;
+    });
+    if (it != d->mAttachments.end()) {
+        update();
+        d->mAttachments.erase(it, d->mAttachments.end());
+        setFieldDirty(FieldAttachment);
+        updated();
     }
-    d->mAttachments = result;
-    setFieldDirty(FieldAttachment);
 }
 
 Attachment::List Incidence::attachments() const
@@ -759,8 +699,10 @@ Attachment::List Incidence::attachments(const QString &mime) const
 
 void Incidence::clearAttachments()
 {
+    update();
     setFieldDirty(FieldAttachment);
     d->mAttachments.clear();
+    updated();
 }
 
 void Incidence::setResources(const QStringList &resources)
@@ -783,6 +725,11 @@ QStringList Incidence::resources() const
 void Incidence::setPriority(int priority)
 {
     if (mReadOnly) {
+        return;
+    }
+
+    if (priority < 0 || priority > 9) {
+        qCWarning(KCALCORE_LOG)  << "Ignoring invalid priority" << priority;
         return;
     }
 
@@ -862,7 +809,7 @@ Alarm::List Incidence::alarms() const
 Alarm::Ptr Incidence::newAlarm()
 {
     Alarm::Ptr alarm(new Alarm(this));
-    d->mAlarms.append(alarm);
+    addAlarm(alarm);
     return alarm;
 }
 
@@ -895,12 +842,9 @@ void Incidence::clearAlarms()
 
 bool Incidence::hasEnabledAlarms() const
 {
-    for (const Alarm::Ptr &alarm : qAsConst(d->mAlarms)) {
-        if (alarm->enabled()) {
-            return true;
-        }
-    }
-    return false;
+    return std::any_of(d->mAlarms.cbegin(), d->mAlarms.cend(), [](const Alarm::Ptr &alarm) {
+        return alarm->enabled();
+    });
 }
 
 Conference::List Incidence::conferences() const
@@ -977,8 +921,10 @@ void Incidence::setSchedulingID(const QString &sid, const QString &uid)
         setUid(uid);
     }
     if (sid != d->mSchedulingID) {
+        update();
         d->mSchedulingID = sid;
         setFieldDirty(FieldSchedulingId);
+        updated();
     }
 }
 
@@ -993,34 +939,44 @@ QString Incidence::schedulingID() const
 
 bool Incidence::hasGeo() const
 {
-    return d->mHasGeo;
+    // For internal consistency, return false if either coordinate is invalid.
+    return d->mGeoLatitude != INVALID_LATLON && d->mGeoLongitude != INVALID_LATLON;
 }
-
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 89)
 void Incidence::setHasGeo(bool hasGeo)
 {
     if (mReadOnly) {
         return;
     }
 
-    if (hasGeo == d->mHasGeo) {
-        return;
+    if (!hasGeo) {
+        update();
+        d->mGeoLatitude = INVALID_LATLON;
+        d->mGeoLongitude = INVALID_LATLON;
+        setFieldDirty(FieldGeoLatitude);
+        setFieldDirty(FieldGeoLongitude);
+        updated();
     }
-
-    update();
-    d->mHasGeo = hasGeo;
-    setFieldDirty(FieldGeoLatitude);
-    setFieldDirty(FieldGeoLongitude);
-    updated();
+    // If hasGeo is true, the caller should set latitude and longitude to legal values..
 }
-
+#endif
 float Incidence::geoLatitude() const
 {
-    return d->mGeoLatitude;
+    // For internal consistency, both coordinates are considered invalid if either is.
+    return (INVALID_LATLON == d->mGeoLongitude) ? INVALID_LATLON : d->mGeoLatitude;
 }
 
 void Incidence::setGeoLatitude(float geolatitude)
 {
     if (mReadOnly) {
+        return;
+    }
+
+    if (isnan(geolatitude)) {
+        geolatitude = INVALID_LATLON;
+    }
+    if (geolatitude != INVALID_LATLON && (geolatitude < -90.0 || geolatitude > 90.0)) {
+        qCWarning(KCALCORE_LOG) << "Ignoring invalid  latitude" << geolatitude;
         return;
     }
 
@@ -1032,17 +988,28 @@ void Incidence::setGeoLatitude(float geolatitude)
 
 float Incidence::geoLongitude() const
 {
-    return d->mGeoLongitude;
+    // For internal consistency, both coordinates are considered invalid if either is.
+    return (INVALID_LATLON == d->mGeoLatitude) ? INVALID_LATLON : d->mGeoLongitude;
 }
 
 void Incidence::setGeoLongitude(float geolongitude)
 {
-    if (!mReadOnly) {
-        update();
-        d->mGeoLongitude = geolongitude;
-        setFieldDirty(FieldGeoLongitude);
-        updated();
+    if (mReadOnly) {
+        return;
     }
+
+    if (isnan(geolongitude)) {
+        geolongitude = INVALID_LATLON;
+    }
+    if (geolongitude != INVALID_LATLON && (geolongitude < -180.0 || geolongitude > 180.0)) {
+        qCWarning(KCALCORE_LOG) << "Ignoring invalid  longitude" << geolongitude;
+        return;
+    }
+
+    update();
+    d->mGeoLongitude = geolongitude;
+    setFieldDirty(FieldGeoLongitude);
+    updated();
 }
 
 bool Incidence::hasRecurrenceId() const
@@ -1129,7 +1096,8 @@ void Incidence::serialize(QDataStream &out) const
 {
     serializeQDateTimeAsKDateTime(out, d->mCreated);
     out << d->mRevision << d->mDescription << d->mDescriptionIsRich << d->mSummary << d->mSummaryIsRich << d->mLocation << d->mLocationIsRich << d->mCategories
-        << d->mResources << d->mStatusString << d->mPriority << d->mSchedulingID << d->mGeoLatitude << d->mGeoLongitude << d->mHasGeo;
+        << d->mResources << d->mStatusString << d->mPriority << d->mSchedulingID << d->mGeoLatitude << d->mGeoLongitude
+        << hasGeo();    // No longer used, but serialized/deserialized for compatibility.
     serializeQDateTimeAsKDateTime(out, d->mRecurrenceId);
     out << d->mThisAndFuture << d->mLocalOnly << d->mStatus << d->mSecrecy << (d->mRecurrence ? true : false) << d->mAttachments.count() << d->mAlarms.count()
         << d->mConferences.count() << d->mRelatedToUid;
@@ -1153,6 +1121,7 @@ void Incidence::serialize(QDataStream &out) const
 
 void Incidence::deserialize(QDataStream &in)
 {
+    bool hasGeo;    // No longer used, but serialized/deserialized for compatibility.
     quint32 status;
     quint32 secrecy;
     bool hasRecurrence;
@@ -1162,7 +1131,7 @@ void Incidence::deserialize(QDataStream &in)
     QMap<int, QString> relatedToUid;
     deserializeKDateTimeAsQDateTime(in, d->mCreated);
     in >> d->mRevision >> d->mDescription >> d->mDescriptionIsRich >> d->mSummary >> d->mSummaryIsRich >> d->mLocation >> d->mLocationIsRich >> d->mCategories
-        >> d->mResources >> d->mStatusString >> d->mPriority >> d->mSchedulingID >> d->mGeoLatitude >> d->mGeoLongitude >> d->mHasGeo;
+        >> d->mResources >> d->mStatusString >> d->mPriority >> d->mSchedulingID >> d->mGeoLatitude >> d->mGeoLongitude >> hasGeo;
     deserializeKDateTimeAsQDateTime(in, d->mRecurrenceId);
     in >> d->mThisAndFuture >> d->mLocalOnly >> status >> secrecy >> hasRecurrence >> attachmentCount >> alarmCount >> conferencesCount >> relatedToUid;
 

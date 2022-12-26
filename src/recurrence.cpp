@@ -18,6 +18,7 @@
 #include <QDataStream>
 #include <QTime>
 #include <QTimeZone>
+#include <QHash>
 
 using namespace KCalendarCore;
 
@@ -34,6 +35,7 @@ public:
 
     Private(const Private &p)
         : mRDateTimes(p.mRDateTimes)
+        , mRDateTimePeriods(p.mRDateTimePeriods)
         , mRDates(p.mRDates)
         , mExDateTimes(p.mExDateTimes)
         , mExDates(p.mExDates)
@@ -49,6 +51,7 @@ public:
     RecurrenceRule::List mExRules;
     RecurrenceRule::List mRRules;
     QList<QDateTime> mRDateTimes;
+    QHash<QDateTime, Period> mRDateTimePeriods; // Map RDate starts with periods if any
     DateList mRDates;
     QList<QDateTime> mExDateTimes;
     DateList mExDates;
@@ -67,7 +70,7 @@ bool Recurrence::Private::operator==(const Recurrence::Private &p) const
     //   qCDebug(KCALCORE_LOG) << mStartDateTime << p.mStartDateTime;
     if ((mStartDateTime != p.mStartDateTime && (mStartDateTime.isValid() || p.mStartDateTime.isValid())) || mAllDay != p.mAllDay
         || mRecurReadOnly != p.mRecurReadOnly || mExDates != p.mExDates || mExDateTimes != p.mExDateTimes || mRDates != p.mRDates
-        || mRDateTimes != p.mRDateTimes) {
+        || mRDateTimes != p.mRDateTimes || mRDateTimePeriods != p.mRDateTimePeriods) {
         return false;
     }
 
@@ -522,21 +525,28 @@ void Recurrence::shiftTimes(const QTimeZone &oldTz, const QTimeZone &newTz)
     d->mStartDateTime = d->mStartDateTime.toTimeZone(oldTz);
     d->mStartDateTime.setTimeZone(newTz);
 
-    int i;
-    int end;
-    for (i = 0, end = d->mRDateTimes.count(); i < end; ++i) {
-        d->mRDateTimes[i] = d->mRDateTimes[i].toTimeZone(oldTz);
-        d->mRDateTimes[i].setTimeZone(newTz);
+    QHash<QDateTime, Period> oldPeriods = d->mRDateTimePeriods;
+
+    for (auto &rDt : d->mRDateTimes) {
+        auto periodIt = oldPeriods.find(rDt);
+        periodIt->shiftTimes(oldTz, newTz);
+        rDt = rDt.toTimeZone(oldTz);
+        rDt.setTimeZone(newTz);
+        // Now there are QDateTime objects in the hash? is this shifting times?
+        d->mRDateTimePeriods.insert(rDt, *periodIt);
     }
-    for (i = 0, end = d->mExDateTimes.count(); i < end; ++i) {
-        d->mExDateTimes[i] = d->mExDateTimes[i].toTimeZone(oldTz);
-        d->mExDateTimes[i].setTimeZone(newTz);
+
+    for (auto &exDt : d->mExDateTimes) {
+        exDt = exDt.toTimeZone(oldTz);
+        exDt.setTimeZone(newTz);
     }
-    for (i = 0, end = d->mRRules.count(); i < end; ++i) {
-        d->mRRules[i]->shiftTimes(oldTz, newTz);
+
+    for (auto &rr : d->mRRules) {
+        rr->shiftTimes(oldTz, newTz);
     }
-    for (i = 0, end = d->mExRules.count(); i < end; ++i) {
-        d->mExRules[i]->shiftTimes(oldTz, newTz);
+
+    for (auto exR : d->mExRules) {
+        exR->shiftTimes(oldTz, newTz);
     }
 }
 
@@ -561,6 +571,7 @@ void Recurrence::clear()
     d->mExRules.clear();
     d->mRDates.clear();
     d->mRDateTimes.clear();
+    d->mRDateTimePeriods.clear();
     d->mExDates.clear();
     d->mExDateTimes.clear();
     d->mCachedType = rMax;
@@ -1337,6 +1348,7 @@ void Recurrence::setRDateTimes(const QList<QDateTime> &rdates)
 
     d->mRDateTimes = rdates;
     sortAndRemoveDuplicates(d->mRDateTimes);
+    d->mRDateTimePeriods.clear();
     updated();
 }
 
@@ -1348,6 +1360,22 @@ void Recurrence::addRDateTime(const QDateTime &rdate)
 
     setInsert(d->mRDateTimes, rdate);
     updated();
+}
+
+void Recurrence::addRDateTimePeriod(const Period &period)
+{
+    if (d->mRecurReadOnly) {
+        return;
+    }
+
+    setInsert(d->mRDateTimes, period.start());
+    d->mRDateTimePeriods.insert(period.start(), period);
+    updated();
+}
+
+Period Recurrence::rDateTimePeriod(const QDateTime &rdate) const
+{
+    return d->mRDateTimePeriods.value(rdate);
 }
 
 DateList Recurrence::rDates() const
@@ -1487,6 +1515,10 @@ KCALENDARCORE_EXPORT QDataStream &KCalendarCore::operator<<(QDataStream &out, KC
     }
 
     serializeQDateTimeList(out, r->d->mRDateTimes);
+    out << r->d->mRDateTimePeriods.size();
+    for (auto it = r->d->mRDateTimePeriods.cbegin(); it != r->d->mRDateTimePeriods.cend(); ++it) {
+        out << it.key() << it.value();
+    }
     serializeQDateTimeList(out, r->d->mExDateTimes);
     out << r->d->mRDates;
     serializeQDateTimeAsKDateTime(out, r->d->mStartDateTime);
@@ -1511,8 +1543,19 @@ KCALENDARCORE_EXPORT QDataStream &KCalendarCore::operator>>(QDataStream &in, KCa
 
     int rruleCount;
     int exruleCount;
+    int size;
 
     deserializeQDateTimeList(in, r->d->mRDateTimes);
+    in >> size;
+    r->d->mRDateTimePeriods.clear();
+    r->d->mRDateTimePeriods.reserve(size);
+    for (int i = 0; i < size; ++i) {
+        QDateTime start;
+        Period period;
+        in >> start >> period;
+        r->d->mRDateTimes << start;
+        r->d->mRDateTimePeriods.insert(start, period);
+    }
     deserializeQDateTimeList(in, r->d->mExDateTimes);
     in >> r->d->mRDates;
     deserializeKDateTimeAsQDateTime(in, r->d->mStartDateTime);

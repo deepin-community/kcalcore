@@ -10,6 +10,7 @@
 #include "todo.h"
 
 #include <QTest>
+#include <QTimeZone>
 QTEST_MAIN(EventTest)
 
 Q_DECLARE_METATYPE(KCalendarCore::Incidence::DateTimeRole)
@@ -92,6 +93,23 @@ void EventTest::testCompare()
     QCOMPARE(event2.summary(), QStringLiteral("Event2 Summary"));
 }
 
+void EventTest::testCompareAlarms()
+{
+    Event event1;
+    event1.setUid(QStringLiteral("uid"));
+    Alarm::Ptr alarm1 = event1.newAlarm();
+    alarm1->setType(Alarm::Email);
+    alarm1->setMailAddress(Person(QStringLiteral("name"), QStringLiteral("email@foo.com")));
+
+    Event event2;
+    event2.setUid(QStringLiteral("uid"));
+    Alarm::Ptr alarm2 = event2.newAlarm();
+    alarm2->setType(Alarm::Email);
+    alarm2->setMailAddress(Person(QStringLiteral("name"), QStringLiteral("email@foo.com")));
+
+    QCOMPARE(event1, event2);
+}
+
 void EventTest::testClone()
 {
     QDate dt = QDate::currentDate();
@@ -111,7 +129,7 @@ void EventTest::testClone()
     delete event2;
 }
 
-void EventTest::testCopy()
+void EventTest::testCopyConstructor()
 {
     QDate dt = QDate::currentDate();
     Event event1;
@@ -122,7 +140,7 @@ void EventTest::testCopy()
     event1.setLocation(QStringLiteral("the place"));
     event1.setTransparency(Event::Transparent);
 
-    Event event2 = event1;
+    Event event2 {event1};
     QCOMPARE(event1.summary(), event2.summary());
     QCOMPARE(event1.dtStart(), event2.dtStart());
     QCOMPARE(event1.dtEnd(), event2.dtEnd());
@@ -158,8 +176,9 @@ void EventTest::testAssign()
     event1.setLocation(QStringLiteral("the place"));
     event1.setTransparency(Event::Transparent);
 
-    Event event2 = event1;
-    QCOMPARE(event1, event2);
+    IncidenceBase *event2 = new Event;
+    *event2 = event1;     // Use IncidenceBase's virtual assignment.
+    QCOMPARE(event1, *event2);
 }
 
 void EventTest::testSerializer_data()
@@ -229,6 +248,22 @@ void EventTest::testDurationDtEnd()
     }
 }
 
+void EventTest::testDtStartChange()
+{
+    QDate dt = QDate::currentDate();
+    Event event1;
+    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    event1.resetDirtyFields();
+
+    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0)));
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtStart});
+    event1.resetDirtyFields();
+
+    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtStart});
+    event1.resetDirtyFields();
+}
+
 void EventTest::testDtEndChange()
 {
     QDate dt = QDate::currentDate();
@@ -241,15 +276,24 @@ void EventTest::testDtEndChange()
     QVERIFY(event1.dirtyFields().empty());
 
     event1.setDtEnd(QDateTime(dt, {}).addDays(2));
-    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>() << IncidenceBase::FieldDtEnd);
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
     event1.resetDirtyFields();
 
     event1.setDtEnd(QDateTime());
-    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>() << IncidenceBase::FieldDtEnd);
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
     event1.resetDirtyFields();
 
     event1.setDtEnd(QDateTime(dt, {}).addDays(2));
-    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>() << IncidenceBase::FieldDtEnd);
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
+    event1.resetDirtyFields();
+
+    event1.setDtEnd(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
+    event1.resetDirtyFields();
+
+    event1.setDtEnd(QDateTime(dt, QTime(1, 0, 0), Qt::LocalTime));
+    QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
+    event1.resetDirtyFields();
 }
 
 void EventTest::testIsMultiDay_data()

@@ -321,12 +321,15 @@ Todo::Ptr VCalFormat::VTodoToEvent(VObject *vtodo)
         uint recurrenceType = Recurrence::rNone;
         int recurrenceTypeAbbrLen = 0;
 
-        QString tmpStr = (QString::fromUtf8(s = fakeCString(vObjectUStringZValue(vo))));
+        s = fakeCString(vObjectUStringZValue(vo));
+        QString tmpStr = QString::fromUtf8(s);
         deleteStr(s);
         tmpStr = tmpStr.simplified();
         const int tmpStrLen = tmpStr.length();
         if (tmpStrLen > 0) {
             tmpStr = tmpStr.toUpper();
+            QStringView prefix = QStringView(tmpStr).left(2);
+
             // first, read the type of the recurrence
             recurrenceTypeAbbrLen = 1;
             if (tmpStr.at(0) == QLatin1Char('D')) {
@@ -335,13 +338,13 @@ Todo::Ptr VCalFormat::VTodoToEvent(VObject *vtodo)
                 recurrenceType = Recurrence::rWeekly;
             } else if (tmpStrLen > 1) {
                 recurrenceTypeAbbrLen = 2;
-                if (tmpStr.leftRef(2) == QLatin1String("MP")) {
+                if (prefix == QLatin1String("MP")) {
                     recurrenceType = Recurrence::rMonthlyPos;
-                } else if (tmpStr.leftRef(2) == QLatin1String("MD")) {
+                } else if (prefix == QLatin1String("MD")) {
                     recurrenceType = Recurrence::rMonthlyDay;
-                } else if (tmpStr.leftRef(2) == QLatin1String("YM")) {
+                } else if (prefix == QLatin1String("YM")) {
                     recurrenceType = Recurrence::rYearlyMonth;
-                } else if (tmpStr.leftRef(2) == QLatin1String("YD")) {
+                } else if (prefix == QLatin1String("YD")) {
                     recurrenceType = Recurrence::rYearlyDay;
                 }
             }
@@ -351,7 +354,11 @@ Todo::Ptr VCalFormat::VTodoToEvent(VObject *vtodo)
             // Immediately after the type is the frequency
             int index = tmpStr.indexOf(QLatin1Char(' '));
             int last = tmpStr.lastIndexOf(QLatin1Char(' ')) + 1; // find last entry
-            int rFreq = tmpStr.midRef(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const int rFreq = QStringView(tmpStr).mid(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#else
+            const int rFreq = tmpStr.midRef(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#endif
             ++index; // advance to beginning of stuff after freq
 
             // Read the type-specific settings
@@ -485,8 +492,12 @@ Todo::Ptr VCalFormat::VTodoToEvent(VObject *vtodo)
             index = last;
             if (tmpStr.mid(index, 1) == QLatin1String("#")) {
                 // Nr of occurrences
-                index++;
-                int rDuration = tmpStr.midRef(index, tmpStr.length() - index).toInt();
+                ++index;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                const int rDuration = QStringView(tmpStr).mid(index, tmpStr.length() - index).toInt();
+#else
+                const int rDuration = tmpStr.midRef(index, tmpStr.length() - index).toInt();
+#endif
                 if (rDuration > 0) {
                     anEvent->recurrence()->setDuration(rDuration);
                 }
@@ -502,12 +513,11 @@ Todo::Ptr VCalFormat::VTodoToEvent(VObject *vtodo)
     // recurrence exceptions
     if ((vo = isAPropertyOf(vtodo, VCExpDateProp)) != nullptr) {
         s = fakeCString(vObjectUStringZValue(vo));
-        QStringList exDates = QString::fromUtf8(s).split(QLatin1Char(','));
-        QStringList::ConstIterator it;
-        for (it = exDates.constBegin(); it != exDates.constEnd(); ++it) {
-            QDateTime exDate = ISOToQDateTime(*it);
+        const QStringList exDates = QString::fromUtf8(s).split(QLatin1Char(','));
+        for (const auto &date : exDates) {
+            const QDateTime exDate = ISOToQDateTime(date);
             if (exDate.time().hour() == 0 && exDate.time().minute() == 0 && exDate.time().second() == 0) {
-                anEvent->recurrence()->addExDate(ISOToQDate(*it));
+                anEvent->recurrence()->addExDate(ISOToQDate(date));
             } else {
                 anEvent->recurrence()->addExDateTime(exDate);
             }
@@ -762,6 +772,8 @@ Event::Ptr VCalFormat::VEventToEvent(VObject *vevent)
         const int tmpStrLen = tmpStr.length();
         if (tmpStrLen > 0) {
             tmpStr = tmpStr.toUpper();
+            const QStringView prefix(tmpStr.left(2));
+
             // first, read the type of the recurrence
             recurrenceTypeAbbrLen = 1;
             if (tmpStr.at(0) == QLatin1Char('D')) {
@@ -770,13 +782,13 @@ Event::Ptr VCalFormat::VEventToEvent(VObject *vevent)
                 recurrenceType = Recurrence::rWeekly;
             } else if (tmpStrLen > 1) {
                 recurrenceTypeAbbrLen = 2;
-                if (tmpStr.leftRef(2) == QLatin1String("MP")) {
+                if (prefix == QLatin1String("MP")) {
                     recurrenceType = Recurrence::rMonthlyPos;
-                } else if (tmpStr.leftRef(2) == QLatin1String("MD")) {
+                } else if (prefix == QLatin1String("MD")) {
                     recurrenceType = Recurrence::rMonthlyDay;
-                } else if (tmpStr.leftRef(2) == QLatin1String("YM")) {
+                } else if (prefix == QLatin1String("YM")) {
                     recurrenceType = Recurrence::rYearlyMonth;
-                } else if (tmpStr.leftRef(2) == QLatin1String("YD")) {
+                } else if (prefix == QLatin1String("YD")) {
                     recurrenceType = Recurrence::rYearlyDay;
                 }
             }
@@ -786,7 +798,11 @@ Event::Ptr VCalFormat::VEventToEvent(VObject *vevent)
             // Immediately after the type is the frequency
             int index = tmpStr.indexOf(QLatin1Char(' '));
             int last = tmpStr.lastIndexOf(QLatin1Char(' ')) + 1; // find last entry
-            int rFreq = tmpStr.midRef(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            const int rFreq = QStringView(tmpStr).mid(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#else
+            const int rFreq = tmpStr.midRef(recurrenceTypeAbbrLen, (index - 1)).toInt();
+#endif
             ++index; // advance to beginning of stuff after freq
 
             // Read the type-specific settings
@@ -920,8 +936,12 @@ Event::Ptr VCalFormat::VEventToEvent(VObject *vevent)
             index = last;
             if (tmpStr.mid(index, 1) == QLatin1String("#")) {
                 // Nr of occurrences
-                index++;
-                int rDuration = tmpStr.midRef(index, tmpStr.length() - index).toInt();
+                ++index;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+                const int rDuration = QStringView(tmpStr).mid(index, tmpStr.length() - index).toInt();
+#else
+                const int rDuration = tmpStr.midRef(index, tmpStr.length() - index).toInt();
+#endif
                 if (rDuration > 0) {
                     anEvent->recurrence()->setDuration(rDuration);
                 }
@@ -939,12 +959,11 @@ Event::Ptr VCalFormat::VEventToEvent(VObject *vevent)
     // recurrence exceptions
     if ((vo = isAPropertyOf(vevent, VCExpDateProp)) != nullptr) {
         s = fakeCString(vObjectUStringZValue(vo));
-        QStringList exDates = QString::fromUtf8(s).split(QLatin1Char(','));
-        QStringList::ConstIterator it;
-        for (it = exDates.constBegin(); it != exDates.constEnd(); ++it) {
-            QDateTime exDate = ISOToQDateTime(*it);
+        const QStringList exDates = QString::fromUtf8(s).split(QLatin1Char(','));
+        for (const auto &date : exDates) {
+            const QDateTime exDate = ISOToQDateTime(date);
             if (exDate.time().hour() == 0 && exDate.time().minute() == 0 && exDate.time().second() == 0) {
-                anEvent->recurrence()->addExDate(ISOToQDate(*it));
+                anEvent->recurrence()->addExDate(ISOToQDate(date));
             } else {
                 anEvent->recurrence()->addExDateTime(exDate);
             }
@@ -1209,24 +1228,22 @@ QString VCalFormat::qDateTimeToISO(const QDateTime &dt, bool zulu)
 
 QDateTime VCalFormat::ISOToQDateTime(const QString &dtStr)
 {
-    QDate tmpDate;
-    QTime tmpTime;
-    QString tmpStr;
-    int year;
-    int month;
-    int day;
-    int hour;
-    int minute;
-    int second;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    auto noAllocString = QStringView{dtStr};
+#else
+    auto noAllocString = QStringRef(&dtStr);
+#endif
 
-    tmpStr = dtStr;
-    year = tmpStr.leftRef(4).toInt();
-    month = tmpStr.midRef(4, 2).toInt();
-    day = tmpStr.midRef(6, 2).toInt();
-    hour = tmpStr.midRef(9, 2).toInt();
-    minute = tmpStr.midRef(11, 2).toInt();
-    second = tmpStr.midRef(13, 2).toInt();
+    int year = noAllocString.left(4).toInt();
+    int month = noAllocString.mid(4, 2).toInt();
+    int day = noAllocString.mid(6, 2).toInt();
+    int hour = noAllocString.mid(9, 2).toInt();
+    int minute = noAllocString.mid(11, 2).toInt();
+    int second = noAllocString.mid(13, 2).toInt();
+
+    QDate tmpDate;
     tmpDate.setDate(year, month, day);
+    QTime tmpTime;
     tmpTime.setHMS(hour, minute, second);
 
     if (tmpDate.isValid() && tmpTime.isValid()) {
@@ -1236,20 +1253,22 @@ QDateTime VCalFormat::ISOToQDateTime(const QString &dtStr)
         } else {
             return QDateTime(tmpDate, tmpTime, d->mCalendar->timeZone());
         }
-    } else {
-        return QDateTime();
     }
+
+    return {};
 }
 
 QDate VCalFormat::ISOToQDate(const QString &dateStr)
 {
-    int year;
-    int month;
-    int day;
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    auto noAllocString = QStringView{dateStr};
+#else
+    auto noAllocString = QStringRef(&dateStr);
+#endif
 
-    year = dateStr.leftRef(4).toInt();
-    month = dateStr.midRef(4, 2).toInt();
-    day = dateStr.midRef(6, 2).toInt();
+    const int year = noAllocString.left(4).toInt();
+    const int month = noAllocString.mid(4, 2).toInt();
+    const int day = noAllocString.mid(6, 2).toInt();
 
     return QDate(year, month, day);
 }
@@ -1264,7 +1283,7 @@ bool VCalFormat::parseTZOffsetISO8601(const QString &s, int &result)
     // We also accept broken one without +
     int mod = 1;
     int v = 0;
-    QString str = s.trimmed();
+    const QString str = s.trimmed();
     int ofs = 0;
     result = 0;
 
@@ -1289,7 +1308,11 @@ bool VCalFormat::parseTZOffsetISO8601(const QString &s, int &result)
         return false;
     }
 
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+    v = QStringView(str).mid(ofs, 2).toInt(&ok) * 60;
+#else
     v = str.midRef(ofs, 2).toInt(&ok) * 60;
+#endif
     if (!ok) {
         return false;
     }
@@ -1303,7 +1326,11 @@ bool VCalFormat::parseTZOffsetISO8601(const QString &s, int &result)
             if (str.size() < (ofs + 2)) {
                 return false;
             }
+#if QT_VERSION >= QT_VERSION_CHECK(6, 0, 0)
+            v += QStringView(str).mid(ofs, 2).toInt(&ok);
+#else
             v += str.midRef(ofs, 2).toInt(&ok);
+#endif
             if (!ok) {
                 return false;
             }
@@ -1369,7 +1396,6 @@ void VCalFormat::populate(VObject *vcal, bool deleted, const QString &notebook)
         QStringList tzList;
         QString tz;
         int utcOffset;
-        int utcOffsetDst;
         if (parseTZOffsetISO8601(ts, utcOffset)) {
             // qCDebug(KCALCORE_LOG) << "got standard offset" << ts << utcOffset;
             // standard from tz
@@ -1398,6 +1424,7 @@ void VCalFormat::populate(VObject *vcal, bool deleted, const QString &notebook)
                         continue;
                     }
 
+                    int utcOffsetDst;
                     if (parseTZOffsetISO8601(argl[1], utcOffsetDst)) {
                         // qCDebug(KCALCORE_LOG) << "got DST offset" << argl[1] << utcOffsetDst;
                         // standard
@@ -1550,13 +1577,12 @@ void VCalFormat::populate(VObject *vcal, bool deleted, const QString &notebook)
     } // while
 
     // Post-Process list of events with relations, put Event objects in relation
-    Event::List::ConstIterator eIt;
-    for (eIt = d->mEventsRelate.constBegin(); eIt != d->mEventsRelate.constEnd(); ++eIt) {
-        (*eIt)->setRelatedTo((*eIt)->relatedTo());
+    for (const auto &eventPtr : std::as_const(d->mEventsRelate)) {
+        eventPtr->setRelatedTo(eventPtr->relatedTo());
     }
-    Todo::List::ConstIterator tIt;
-    for (tIt = d->mTodosRelate.constBegin(); tIt != d->mTodosRelate.constEnd(); ++tIt) {
-        (*tIt)->setRelatedTo((*tIt)->relatedTo());
+
+    for (const auto &todoPtr : std::as_const(d->mTodosRelate)) {
+        todoPtr->setRelatedTo(todoPtr->relatedTo());
     }
 
     // Now lets put the TZ back as it was if we have changed it.
@@ -1667,12 +1693,13 @@ void VCalFormat::readCustomProperties(VObject *o, const Incidence::Ptr &i)
 void VCalFormat::writeCustomProperties(VObject *o, const Incidence::Ptr &i)
 {
     const QMap<QByteArray, QString> custom = i->customProperties();
-    for (QMap<QByteArray, QString>::ConstIterator c = custom.begin(); c != custom.end(); ++c) {
-        if (d->mManuallyWrittenExtensionFields.contains(c.key()) || c.key().startsWith("X-KDE-VOLATILE")) { // krazy:exclude=strings
+    for (auto cIt = custom.cbegin(); cIt != custom.cend(); ++cIt) {
+        const QByteArray property = cIt.key();
+        if (d->mManuallyWrittenExtensionFields.contains(property) || property.startsWith("X-KDE-VOLATILE")) { // krazy:exclude=strings
             continue;
         }
 
-        addPropValue(o, c.key().constData(), c.value().toUtf8().constData());
+        addPropValue(o, property.constData(), cIt.value().toUtf8().constData());
     }
 }
 

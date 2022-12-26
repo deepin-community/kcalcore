@@ -34,29 +34,33 @@ using namespace KCalendarCore;
   @internal
 */
 //@cond PRIVATE
-class Q_DECL_HIDDEN KCalendarCore::Todo::Private
+class KCalendarCore::TodoPrivate
 {
     Todo *const q;
 
-    QDateTime mDtDue; // to-do due date (if there is one); also the first occurrence of a recurring to-do
+    // Due date of the to-do or its first recurrence if it recurs;  invalid() <=> no defined due date.
+    QDateTime mDtDue;
     QDateTime mDtRecurrence; // next occurrence (for recurring to-dos)
     QDateTime mCompleted; // to-do completion date (if it has been completed)
     int mPercentComplete = 0; // to-do percent complete [0,100]
 
 public:
 
-    Private(Todo *todo)
+    TodoPrivate(Todo *todo)
         : q(todo)
     {
     }
 
-    Private(Todo * todo, const KCalendarCore::Todo::Private &other)
+    TodoPrivate(const TodoPrivate &other, Todo * todo)
         : q(todo)
     {
         init(other);
     }
 
-    void init(const KCalendarCore::Todo::Private &other);
+    // Default copy constructor would copy q.
+    TodoPrivate(TodoPrivate &p) = delete;
+
+    void init(const TodoPrivate &other);
 
     void setDtDue(const QDateTime dd);
     QDateTime dtDue() const
@@ -86,41 +90,43 @@ public:
       Returns true if the todo got a new date, else false will be returned.
     */
     bool recurTodo(Todo *todo);
+
+    void deserialize(QDataStream &in);
 };
 
-void Todo::Private::setDtDue(const QDateTime dd)
+void TodoPrivate::setDtDue(const QDateTime dd)
 {
     if (dd != mDtDue) {
         mDtDue = dd;
-        q->setFieldDirty(FieldDtDue);
+        q->setFieldDirty(IncidenceBase::FieldDtDue);
     }
 }
 
-void Todo::Private::setDtRecurrence(const QDateTime dr)
+void TodoPrivate::setDtRecurrence(const QDateTime dr)
 {
     if (dr != mDtRecurrence) {
         mDtRecurrence = dr;
-        q->setFieldDirty(FieldRecurrenceId);
+        q->setFieldDirty(IncidenceBase::FieldRecurrenceId);
     }
 }
 
-void Todo::Private::setCompleted(const QDateTime dc)
+void TodoPrivate::setCompleted(const QDateTime dc)
 {
     if (dc != mCompleted) {
         mCompleted = dc.toUTC();
-        q->setFieldDirty(FieldCompleted);
+        q->setFieldDirty(IncidenceBase::FieldCompleted);
     }
 }
 
-void Todo::Private::setPercentComplete(const int pc)
+void TodoPrivate::setPercentComplete(const int pc)
 {
     if (pc != mPercentComplete) {
         mPercentComplete = pc;
-        q->setFieldDirty(FieldPercentComplete);
+        q->setFieldDirty(IncidenceBase::FieldPercentComplete);
     }
 }
 
-void KCalendarCore::Todo::Private::init(const KCalendarCore::Todo::Private &other)
+void TodoPrivate::init(const TodoPrivate &other)
 {
     mDtDue = other.mDtDue;
     mDtRecurrence = other.mDtRecurrence;
@@ -131,19 +137,19 @@ void KCalendarCore::Todo::Private::init(const KCalendarCore::Todo::Private &othe
 //@endcond
 
 Todo::Todo()
-    : d(new KCalendarCore::Todo::Private(this))
+    : d(new TodoPrivate(this))
 {
 }
 
 Todo::Todo(const Todo &other)
     : Incidence(other)
-    , d(new KCalendarCore::Todo::Private(*other.d))
+    , d(new TodoPrivate(*other.d, this))
 {
 }
 
 Todo::Todo(const Incidence &other)
     : Incidence(other)
-    , d(new KCalendarCore::Todo::Private(this))
+    , d(new TodoPrivate(this))
 {
 }
 
@@ -456,7 +462,7 @@ void Todo::setAllDay(bool allday)
 }
 
 //@cond PRIVATE
-bool Todo::Private::recurTodo(Todo *todo)
+bool TodoPrivate::recurTodo(Todo *todo)
 {
     if (todo && todo->recurs()) {
         Recurrence *r = todo->recurrence();
@@ -598,16 +604,18 @@ void Todo::serialize(QDataStream &out) const
     out << d->percentComplete();
 }
 
+void TodoPrivate::deserialize(QDataStream &in)
+{
+    deserializeKDateTimeAsQDateTime(in, mDtDue);
+    deserializeKDateTimeAsQDateTime(in, mDtRecurrence);
+    deserializeKDateTimeAsQDateTime(in, mCompleted);
+    in >> mPercentComplete;
+}
+
 void Todo::deserialize(QDataStream &in)
 {
     Incidence::deserialize(in);
-    d->setDtDue(deserializeKDateTimeAsQDateTime(in));
-    d->setDtRecurrence(deserializeKDateTimeAsQDateTime(in));
-    d->setCompleted(deserializeKDateTimeAsQDateTime(in));
-    int pc;
-    in >> pc;
-    d->setPercentComplete(pc);
-    resetDirtyFields();
+    d->deserialize(in);
 }
 
 bool Todo::supportsGroupwareCommunication() const

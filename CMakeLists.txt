@@ -1,11 +1,11 @@
 cmake_minimum_required(VERSION 3.16)
-set(KF_VERSION "5.86.0") # handled by release scripts
+set(KF_VERSION "5.90.0") # handled by release scripts
 
 project(KCalendarCore VERSION ${KF_VERSION})
 
 # ECM setup
 include(FeatureSummary)
-find_package(ECM 5.86.0  NO_MODULE)
+find_package(ECM 5.90.0  NO_MODULE)
 set_package_properties(ECM PROPERTIES TYPE REQUIRED DESCRIPTION "Extra CMake Modules." URL "https://commits.kde.org/extra-cmake-modules")
 feature_summary(WHAT REQUIRED_PACKAGES_NOT_FOUND FATAL_ON_MISSING_REQUIRED_PACKAGES)
 
@@ -47,9 +47,13 @@ ecm_setup_version(PROJECT VARIABLE_PREFIX KCALENDARCORE
 )
 
 ########### Find packages ###########
-find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED Core Gui)
+find_package(Qt${QT_MAJOR_VERSION} ${REQUIRED_QT_VERSION} CONFIG REQUIRED Core Gui)
 
 set(LibIcal_MIN_VERSION "3.0")
+# TODO remove our FindLibIcal.cmake in favor of upstream LibIcalConfig.cmake once the following issues are resolved:
+# https://github.com/libical/libical/pull/510
+# https://bugs.launchpad.net/ubuntu/+source/libical3/+bug/1946963
+# https://bugs.launchpad.net/ubuntu/+source/libical/+bug/1920587
 find_package(LibIcal ${LibIcal_MIN_VERSION})
 set_package_properties(LibIcal PROPERTIES TYPE REQUIRED)
 
@@ -74,11 +78,9 @@ add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050f02)
 add_subdirectory(src)
 
 if(BUILD_TESTING)
-  find_package(Qt5 ${REQUIRED_QT_VERSION} CONFIG REQUIRED Test)
+  find_package(Qt${QT_MAJOR_VERSION} ${REQUIRED_QT_VERSION} CONFIG REQUIRED Test)
   add_subdirectory(autotests)
 endif()
-
-add_subdirectory(cmake)
 
 ########### Install Files ###########
 install(FILES
@@ -105,7 +107,7 @@ endif()
 
 install(FILES
   ${CMAKE_CURRENT_BINARY_DIR}/kcalendarcore_version.h
-  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5} COMPONENT Devel
+  DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF} COMPONENT Devel
 )
 if (NOT KCALENDARCORE_NO_DEPRECATED_NAMESPACE)
   ecm_setup_version(PROJECT VARIABLE_PREFIX KCALCORE
@@ -113,14 +115,14 @@ if (NOT KCALENDARCORE_NO_DEPRECATED_NAMESPACE)
   )
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/kcalcore_version.h
-    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF5} COMPONENT Devel
+    DESTINATION ${KDE_INSTALL_INCLUDEDIR_KF} COMPONENT Devel
   )
 endif()
 
 if (NOT WIN32)
     ecm_generate_pkgconfig_file(BASE_NAME KF5CalendarCore
-      INCLUDE_INSTALL_DIR ${KDE_INSTALL_INCLUDEDIR_KF5}/KCalendarCore/
-      DEPS Qt5Core
+      INCLUDE_INSTALL_DIR ${KDE_INSTALL_INCLUDEDIR_KF}/KCalendarCore/
+      DEPS "Qt5Core Qt5Gui"
     INSTALL)
 endif()
 

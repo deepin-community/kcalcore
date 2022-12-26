@@ -19,13 +19,15 @@ private Q_SLOTS:
     void testSetRoles();
     void testValidity();
     void testCompare();
+    void testCompareAlarms();
     void testClone();
-    void testCopy();
+    void testCopyConstructor();
     void testCopyIncidence();
     void testAssign();
     void testSerializer_data();
     void testSerializer();
     void testDurationDtEnd();
+    void testDtStartChange();
     void testDtEndChange();
     void testIsMultiDay_data();
     void testIsMultiDay();

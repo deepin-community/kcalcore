@@ -72,14 +72,10 @@ void CalFilter::apply(Event::List *eventList) const
         return;
     }
 
-    Event::List::Iterator it = eventList->begin();
-    while (it != eventList->end()) {
-        if (!filterIncidence(*it)) {
-            it = eventList->erase(it);
-        } else {
-            ++it;
-        }
-    }
+    auto it = std::remove_if(eventList->begin(), eventList->end(), [=](const Incidence::Ptr &incidence) {
+        return !filterIncidence(incidence);
+    });
+    eventList->erase(it, eventList->end());
 }
 
 // TODO: avoid duplicating apply() code
@@ -89,14 +85,10 @@ void CalFilter::apply(Todo::List *todoList) const
         return;
     }
 
-    Todo::List::Iterator it = todoList->begin();
-    while (it != todoList->end()) {
-        if (!filterIncidence(*it)) {
-            it = todoList->erase(it);
-        } else {
-            ++it;
-        }
-    }
+    auto it = std::remove_if(todoList->begin(), todoList->end(), [=](const Incidence::Ptr &incidence) {
+        return !filterIncidence(incidence);
+    });
+    todoList->erase(it, todoList->end());
 }
 
 void CalFilter::apply(Journal::List *journalList) const
@@ -105,14 +97,10 @@ void CalFilter::apply(Journal::List *journalList) const
         return;
     }
 
-    Journal::List::Iterator it = journalList->begin();
-    while (it != journalList->end()) {
-        if (!filterIncidence(*it)) {
-            it = journalList->erase(it);
-        } else {
-            ++it;
-        }
-    }
+    auto it = std::remove_if(journalList->begin(), journalList->end(), [=](const Incidence::Ptr &incidence) {
+        return !filterIncidence(incidence);
+    });
+    journalList->erase(it, journalList->end());
 }
 
 bool CalFilter::filterIncidence(const Incidence::Ptr &incidence) const
@@ -137,14 +125,10 @@ bool CalFilter::filterIncidence(const Incidence::Ptr &incidence) const
         if (d->mCriteria & HideNoMatchingAttendeeTodos) {
             bool iAmOneOfTheAttendees = false;
             const Attendee::List &attendees = todo->attendees();
-            if (!todo->attendees().isEmpty()) {
-                Attendee::List::ConstIterator it;
-                for (it = attendees.begin(); it != attendees.end(); ++it) {
-                    if (d->mEmailList.contains((*it).email())) {
-                        iAmOneOfTheAttendees = true;
-                        break;
-                    }
-                }
+            if (!attendees.isEmpty()) {
+                iAmOneOfTheAttendees = std::any_of(attendees.cbegin(), attendees.cend(), [this](const Attendee &att) {
+                    return d->mEmailList.contains(att.email());
+                });
             } else {
                 // no attendees, must be me only
                 iAmOneOfTheAttendees = true;
@@ -161,27 +145,16 @@ bool CalFilter::filterIncidence(const Incidence::Ptr &incidence) const
         }
     }
 
-    if (d->mCriteria & ShowCategories) {
-        for (QStringList::ConstIterator it = d->mCategoryList.constBegin(); it != d->mCategoryList.constEnd(); ++it) {
-            QStringList incidenceCategories = incidence->categories();
-            for (QStringList::ConstIterator it2 = incidenceCategories.constBegin(); it2 != incidenceCategories.constEnd(); ++it2) {
-                if ((*it) == (*it2)) {
-                    return true;
-                }
-            }
+    const QStringList incidenceCategories = incidence->categories();
+    bool isFound = false;
+    for (const auto &category : std::as_const(d->mCategoryList)) {
+        if (incidenceCategories.contains(category)) {
+            isFound = true;
+            break;
         }
-        return false;
-    } else {
-        for (QStringList::ConstIterator it = d->mCategoryList.constBegin(); it != d->mCategoryList.constEnd(); ++it) {
-            QStringList incidenceCategories = incidence->categories();
-            for (QStringList::ConstIterator it2 = incidenceCategories.constBegin(); it2 != incidenceCategories.constEnd(); ++it2) {
-                if ((*it) == (*it2)) {
-                    return false;
-                }
-            }
-        }
-        return true;
     }
+
+    return (d->mCriteria & ShowCategories) ? isFound : !isFound;
 }
 
 void CalFilter::setName(const QString &name)

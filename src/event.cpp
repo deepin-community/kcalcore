@@ -30,30 +30,30 @@ using namespace KCalendarCore;
   @internal
 */
 //@cond PRIVATE
-class Q_DECL_HIDDEN KCalendarCore::Event::Private
+class KCalendarCore::EventPrivate
 {
 public:
     QDateTime mDtEnd;
-    Transparency mTransparency = Opaque;
+    Event::Transparency mTransparency = Event::Opaque;
     bool mMultiDayValid = false;
     bool mMultiDay = false;
 };
 //@endcond
 
 Event::Event()
-    : d(new KCalendarCore::Event::Private)
+    : d(new KCalendarCore::EventPrivate)
 {
 }
 
 Event::Event(const Event &other)
     : Incidence(other)
-    , d(new KCalendarCore::Event::Private(*other.d))
+    , d(new KCalendarCore::EventPrivate(*other.d))
 {
 }
 
 Event::Event(const Incidence &other)
     : Incidence(other)
-    , d(new KCalendarCore::Event::Private)
+    , d(new KCalendarCore::EventPrivate)
 {
 }
 
@@ -110,7 +110,7 @@ void Event::setDtEnd(const QDateTime &dtEnd)
         return;
     }
 
-    if (d->mDtEnd != dtEnd || hasDuration() == dtEnd.isValid()) {
+    if (d->mDtEnd != dtEnd || d->mDtEnd.timeSpec() != dtEnd.timeSpec() || hasDuration() == dtEnd.isValid()) {
         update();
         d->mDtEnd = dtEnd;
         d->mMultiDayValid = false;
@@ -195,8 +195,11 @@ void Event::shiftTimes(const QTimeZone &oldZone, const QTimeZone &newZone)
 {
     Incidence::shiftTimes(oldZone, newZone);
     if (d->mDtEnd.isValid()) {
+        update();
         d->mDtEnd = d->mDtEnd.toTimeZone(oldZone);
         d->mDtEnd.setTimeZone(newZone);
+        setFieldDirty(FieldDtEnd);
+        updated();
     }
 }
 
@@ -218,6 +221,7 @@ Event::Transparency Event::transparency() const
 
 void Event::setDuration(const Duration &duration)
 {
+    // These both call update()/updated() and setFieldDirty().
     setDtEnd(QDateTime());
     Incidence::setDuration(duration);
 }
@@ -225,8 +229,10 @@ void Event::setDuration(const Duration &duration)
 void Event::setAllDay(bool allday)
 {
     if (allday != allDay() && !mReadOnly) {
+        update();
         setFieldDirty(FieldDtEnd);
         Incidence::setAllDay(allday);
+        updated();
     }
 }
 

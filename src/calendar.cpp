@@ -5,6 +5,7 @@
   SPDX-FileCopyrightText: 2000-2004 Cornelius Schumacher <schumacher@kde.org>
   SPDX-FileCopyrightText: 2003-2004 Reinhold Kainhofer <reinhold@kainhofer.com>
   SPDX-FileCopyrightText: 2006 David Jarvie <djarvie@kde.org>
+  SPDX-FileCopyrightText: 2021 Boris Shmarin <b.shmarin@omp.ru>
 
   SPDX-License-Identifier: LGPL-2.0-or-later
 */
@@ -32,10 +33,11 @@
 
 
 extern "C" {
-#include <icaltimezone.h>
+#include <libical/icaltimezone.h>
 }
 
-#include <algorithm> // for std::remove()
+#include <algorithm>
+#include <set>
 
 using namespace KCalendarCore;
 
@@ -254,20 +256,20 @@ CalFilter *Calendar::filter() const
 
 QStringList Calendar::categories() const
 {
-    Incidence::List rawInc(rawIncidences());
-    QStringList cats;
+    const Incidence::List rawInc = rawIncidences();
+    QStringList uniqueCategories;
     QStringList thisCats;
     // @TODO: For now just iterate over all incidences. In the future,
     // the list of categories should be built when reading the file.
-    for (Incidence::List::ConstIterator i = rawInc.constBegin(); i != rawInc.constEnd(); ++i) {
-        thisCats = (*i)->categories();
-        for (QStringList::ConstIterator si = thisCats.constBegin(); si != thisCats.constEnd(); ++si) {
-            if (!cats.contains(*si)) {
-                cats.append(*si);
+    for (const Incidence::Ptr &inc : rawInc) {
+        thisCats = inc->categories();
+        for (const auto &cat : std::as_const(thisCats)) {
+            if (!uniqueCategories.contains(cat)) {
+                uniqueCategories.append(cat);
             }
         }
     }
-    return cats;
+    return uniqueCategories;
 }
 
 Incidence::List Calendar::incidences(const QDate &date) const
@@ -307,20 +309,17 @@ Incidence::List Calendar::instances(const Incidence::Ptr &incidence) const
 
 Incidence::List Calendar::duplicates(const Incidence::Ptr &incidence)
 {
-    if (incidence) {
-        Incidence::List list;
-        Incidence::List vals = values(d->mNotebookIncidences);
-        Incidence::List::const_iterator it;
-        for (it = vals.constBegin(); it != vals.constEnd(); ++it) {
-            if (((incidence->dtStart() == (*it)->dtStart()) || (!incidence->dtStart().isValid() && !(*it)->dtStart().isValid()))
-                && (incidence->summary() == (*it)->summary())) {
-                list.append(*it);
-            }
-        }
-        return list;
-    } else {
-        return Incidence::List();
+    if (!incidence) {
+        return {};
     }
+
+    Incidence::List list;
+    const Incidence::List vals = values(d->mNotebookIncidences);
+    std::copy_if(vals.cbegin(), vals.cend(), std::back_inserter(list), [&](const Incidence::Ptr &in) {
+        return (incidence->dtStart() == in->dtStart() || (!incidence->dtStart().isValid() && !in->dtStart().isValid()))
+            && incidence->summary() == in->summary();
+    });
+    return list;
 }
 
 bool Calendar::addNotebook(const QString &notebook, bool isVisible)
@@ -339,11 +338,11 @@ bool Calendar::updateNotebook(const QString &notebook, bool isVisible)
         return false;
     } else {
         d->mNotebooks.insert(notebook, isVisible);
-        const QList<Incidence::Ptr> incidences = d->mNotebookIncidences.values(notebook);
-        for (Incidence::Ptr incidence : incidences) {
-            QHash<Incidence::Ptr, bool>::Iterator it = d->mIncidenceVisibility.find(incidence);
-            if (it != d->mIncidenceVisibility.end()) {
-                *it = isVisible;
+        for (auto noteIt = d->mNotebookIncidences.cbegin(); noteIt != d->mNotebookIncidences.cend(); ++noteIt) {
+            const Incidence::Ptr &incidence = noteIt.value();
+            auto visibleIt = d->mIncidenceVisibility.find(incidence);
+            if (visibleIt != d->mIncidenceVisibility.end()) {
+                *visibleIt = isVisible;
             }
         }
         return true;
@@ -428,11 +427,10 @@ bool Calendar::setNotebook(const Incidence::Ptr &inc, const QString &notebook)
                 return false;
             }
             // Move all possible children also.
-            Incidence::List list = instances(inc);
-            Incidence::List::Iterator it;
-            for (it = list.begin(); it != list.end(); ++it) {
-                d->mNotebookIncidences.remove(old, *it);
-                d->mNotebookIncidences.insert(notebook, *it);
+            const Incidence::List list = instances(inc);
+            for (const auto &incidence : list) {
+                d->mNotebookIncidences.remove(old, incidence);
+                d->mNotebookIncidences.insert(notebook, incidence);
             }
             notifyIncidenceChanged(inc); // for removing from old notebook
             // don not remove from mUidToNotebook to keep deleted incidences
@@ -583,7 +581,9 @@ Incidence::Ptr Calendar::createException(const Incidence::Ptr &incidence, const 
     }
 
     Incidence::Ptr newInc(incidence->clone());
-    newInc->setCreated(QDateTime::currentDateTimeUtc());
+    const QDateTime current = QDateTime::currentDateTimeUtc();
+    newInc->setCreated(current);
+    newInc->setLastModified(current);
     newInc->setRevision(0);
     // Recurring exceptions are not support for now
     newInc->clearRecurrence();
@@ -644,27 +644,21 @@ Incidence::List Calendar::incidencesFromSchedulingID(const QString &sid) const
 {
     Incidence::List result;
     const Incidence::List incidences = rawIncidences();
-    Incidence::List::const_iterator it = incidences.begin();
-    for (; it != incidences.end(); ++it) {
-        if ((*it)->schedulingID() == sid) {
-            result.append(*it);
-        }
-    }
+    std::copy_if(incidences.cbegin(), incidences.cend(), std::back_inserter(result), [&sid](const Incidence::Ptr &in) {
+        return in->schedulingID() == sid;
+    });
     return result;
 }
 
 Incidence::Ptr Calendar::incidenceFromSchedulingID(const QString &uid) const
 {
     const Incidence::List incidences = rawIncidences();
-    Incidence::List::const_iterator it = incidences.begin();
-    for (; it != incidences.end(); ++it) {
-        if ((*it)->schedulingID() == uid) {
-            // Touchdown, and the crowd goes wild
-            return *it;
-        }
-    }
-    // Not found
-    return Incidence::Ptr();
+    const auto itEnd = incidences.cend();
+    auto it = std::find_if(incidences.cbegin(), itEnd, [&uid](const Incidence::Ptr &in) {
+        return in->schedulingID() == uid;
+    });
+
+    return it != itEnd ? *it : Incidence::Ptr();
 }
 
 /** static */
@@ -837,7 +831,7 @@ void Calendar::setupRelations(const Incidence::Ptr &forincidence)
     }
 
     // Now see about this incidences parent
-    if (forincidence->relatedTo().isEmpty() && !forincidence->relatedTo().isEmpty()) {
+    if (!forincidence->relatedTo().isEmpty()) {
         // Incidence has a uid it is related to but is not registered to it yet.
         // Try to find it
         Incidence::Ptr parent = incidence(forincidence->relatedTo());
@@ -904,26 +898,22 @@ void Calendar::removeRelations(const Incidence::Ptr &incidence)
         // First, create a list of all keys in the mOrphans list which point
         // to the removed item
         relatedToUids << incidence->relatedTo();
-        for (QMultiHash<QString, Incidence::Ptr>::Iterator it = d->mOrphans.begin(); it != d->mOrphans.end(); ++it) {
+        for (auto it = d->mOrphans.cbegin(); it != d->mOrphans.cend(); ++it) {
             if (it.value()->uid() == uid) {
                 relatedToUids << it.key();
             }
         }
 
         // now go through all uids that have one entry that point to the incidence
-        for (QStringList::const_iterator uidit = relatedToUids.constBegin(); uidit != relatedToUids.constEnd(); ++uidit) {
-            Incidence::List tempList;
+        for (const auto &relUid : std::as_const(relatedToUids)) {
             // Remove all to get access to the remaining entries
-            const Incidence::List l = values(d->mOrphans, *uidit);
-            d->mOrphans.remove(*uidit);
-            for (const Incidence::Ptr &i : l) {
-                if (i != incidence) {
-                    tempList.append(i);
-                }
-            }
+            Incidence::List lst = values(d->mOrphans, relUid);
+            d->mOrphans.remove(relUid);
+            lst.erase(std::remove(lst.begin(), lst.end(), incidence), lst.end());
+
             // Re-add those that point to a different orphan incidence
-            for (Incidence::List::Iterator incit = tempList.begin(); incit != tempList.end(); ++incit) {
-                d->mOrphans.insert(*uidit, *incit);
+            for (const auto &in : std::as_const(lst)) {
+                d->mOrphans.insert(relUid, in);
             }
         }
     }
