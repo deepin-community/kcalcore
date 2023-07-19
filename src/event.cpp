@@ -17,6 +17,7 @@
 */
 
 #include "event.h"
+#include "incidence_p.h"
 #include "kcalendarcore_debug.h"
 #include "utils_p.h"
 #include "visitor.h"
@@ -30,37 +31,53 @@ using namespace KCalendarCore;
   @internal
 */
 //@cond PRIVATE
-class KCalendarCore::EventPrivate
+class KCalendarCore::EventPrivate : public IncidencePrivate
 {
 public:
+    EventPrivate() = default;
+    explicit EventPrivate(const Incidence &);
+    bool validStatus(Incidence::Status) override;
+
     QDateTime mDtEnd;
     Event::Transparency mTransparency = Event::Opaque;
     bool mMultiDayValid = false;
     bool mMultiDay = false;
 };
+
+// Copy IncidencePrivate and IncidenceBasePrivate members,
+// but default-initialize EventPrivate members.
+EventPrivate::EventPrivate(const Incidence &other)
+    : IncidencePrivate(other)
+{
+}
+
+bool EventPrivate::validStatus(Incidence::Status status)
+{
+    constexpr unsigned validSet
+        = 1u << Incidence::StatusNone
+        | 1u << Incidence::StatusTentative
+        | 1u << Incidence::StatusConfirmed
+        | 1u << Incidence::StatusCanceled;
+    return validSet & (1u << status);
+}
 //@endcond
 
 Event::Event()
-    : d(new KCalendarCore::EventPrivate)
+    : Incidence(new EventPrivate)
 {
 }
 
 Event::Event(const Event &other)
-    : Incidence(other)
-    , d(new KCalendarCore::EventPrivate(*other.d))
+    : Incidence(other, new EventPrivate(*(other.d_func())))
 {
 }
 
 Event::Event(const Incidence &other)
-    : Incidence(other)
-    , d(new KCalendarCore::EventPrivate)
+    : Incidence(other, new EventPrivate(other))
 {
 }
 
-Event::~Event()
-{
-    delete d;
-}
+Event::~Event() = default;
 
 Event *Event::clone() const
 {
@@ -69,10 +86,14 @@ Event *Event::clone() const
 
 IncidenceBase &Event::assign(const IncidenceBase &other)
 {
+    Q_D(Event);
     if (&other != this) {
         Incidence::assign(other);
-        const Event *e = static_cast<const Event *>(&other);
-        *d = *(e->d);
+        const auto o = static_cast<const Event *>(&other)->d_func();
+        d->mDtEnd = o->mDtEnd;
+        d->mTransparency = o->mTransparency;
+        d->mMultiDayValid = o->mMultiDayValid;
+        d->mMultiDay = o->mMultiDay;
     }
     return *this;
 }
@@ -84,7 +105,7 @@ bool Event::equals(const IncidenceBase &event) const
     } else {
         // If they weren't the same type IncidenceBase::equals would had returned false already
         const Event *e = static_cast<const Event *>(&event);
-        return ((dtEnd() == e->dtEnd()) || (!dtEnd().isValid() && !e->dtEnd().isValid())) && transparency() == e->transparency();
+        return identical(dtEnd(), e->dtEnd()) && transparency() == e->transparency();
     }
 }
 
@@ -100,6 +121,7 @@ QByteArray Event::typeStr() const
 
 void Event::setDtStart(const QDateTime &dt)
 {
+    Q_D(Event);
     d->mMultiDayValid = false;
     Incidence::setDtStart(dt);
 }
@@ -110,7 +132,8 @@ void Event::setDtEnd(const QDateTime &dtEnd)
         return;
     }
 
-    if (d->mDtEnd != dtEnd || d->mDtEnd.timeSpec() != dtEnd.timeSpec() || hasDuration() == dtEnd.isValid()) {
+    Q_D(Event);
+    if (!identical(d->mDtEnd, dtEnd) || hasDuration() == dtEnd.isValid()) {
         update();
         d->mDtEnd = dtEnd;
         d->mMultiDayValid = false;
@@ -122,6 +145,7 @@ void Event::setDtEnd(const QDateTime &dtEnd)
 
 QDateTime Event::dtEnd() const
 {
+    Q_D(const Event);
     if (d->mDtEnd.isValid()) {
         return d->mDtEnd;
     }
@@ -153,11 +177,13 @@ QDate Event::dateEnd() const
 
 bool Event::hasEndDate() const
 {
+    Q_D(const Event);
     return d->mDtEnd.isValid();
 }
 
 bool Event::isMultiDay(const QTimeZone &zone) const
 {
+    Q_D(const Event);
     // First off, if spec's not valid, we can check for cache
     if (!zone.isValid() && d->mMultiDayValid) {
         return d->mMultiDay;
@@ -186,13 +212,17 @@ bool Event::isMultiDay(const QTimeZone &zone) const
 
     // Update the cache
     // Also update Cache if spec is invalid
-    d->mMultiDayValid = true;
-    d->mMultiDay = multi;
+    {
+        auto d = static_cast<EventPrivate *>(d_ptr);
+        d->mMultiDayValid = true;
+        d->mMultiDay = multi;
+    }
     return multi;
 }
 
 void Event::shiftTimes(const QTimeZone &oldZone, const QTimeZone &newZone)
 {
+    Q_D(Event);
     Incidence::shiftTimes(oldZone, newZone);
     if (d->mDtEnd.isValid()) {
         update();
@@ -209,6 +239,7 @@ void Event::setTransparency(Event::Transparency transparency)
         return;
     }
     update();
+    Q_D(Event);
     d->mTransparency = transparency;
     setFieldDirty(FieldTransparency);
     updated();
@@ -216,6 +247,7 @@ void Event::setTransparency(Event::Transparency transparency)
 
 Event::Transparency Event::transparency() const
 {
+    Q_D(const Event);
     return d->mTransparency;
 }
 
@@ -312,6 +344,7 @@ QLatin1String Event::iconName(const QDateTime &) const
 
 void Event::serialize(QDataStream &out) const
 {
+    Q_D(const Event);
     Incidence::serialize(out);
     serializeQDateTimeAsKDateTime(out, d->mDtEnd);
     out << hasEndDate() << static_cast<quint32>(d->mTransparency) << d->mMultiDayValid << d->mMultiDay;
@@ -319,6 +352,7 @@ void Event::serialize(QDataStream &out) const
 
 void Event::deserialize(QDataStream &in)
 {
+    Q_D(Event);
     Incidence::deserialize(in);
     bool hasEndDateDummy = true;
     deserializeKDateTimeAsQDateTime(in, d->mDtEnd);

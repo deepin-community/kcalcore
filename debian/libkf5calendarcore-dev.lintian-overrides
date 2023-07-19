@@ -1,4 +1,2 @@
-# header file for "to do" items
-libkf5calendarcore-dev: package-contains-documentation-outside-usr-share-doc usr/include/KF5/KCalendarCore/KCal*Core/Todo
 # shipped like this by upstream
 libkf5calendarcore-dev: repeated-path-segment

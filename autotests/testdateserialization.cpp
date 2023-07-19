@@ -50,7 +50,7 @@ void TestDateSerialization::testNewRecurringTodo()
 // See bug 345565.
 void TestDateSerialization::testTodoCompletedOnce()
 {
-    QDateTime startDate = QDate::currentDate().startOfDay();
+    QDateTime startDate = QDate(QDate::currentDate().year(), QDate::currentDate().month(), 1).startOfDay();
     QDateTime dueDate{startDate.addDays(1)};
 
     Todo::Ptr todo(new Todo);
@@ -79,4 +79,27 @@ void TestDateSerialization::testTodoCompletedOnce()
     QCOMPARE(todo->dtStart(false), startDate.addMonths(1));
     QCOMPARE(todo->dtDue(true), dueDate);
     QCOMPARE(todo->dtDue(false), dueDate.addMonths(1));
+}
+
+// Check that QDateTime values with UTC offsets are handled correctly
+void TestDateSerialization::testUTCOffset()
+{
+    QDateTime startDate({2022, 3, 6}, {10, 25}, Qt::OffsetFromUTC, 3600);
+
+    Event::Ptr event(new Event);
+    event->setDtStart(startDate);
+
+    MemoryCalendar::Ptr cal{new MemoryCalendar(QTimeZone::utc())};
+    cal->addIncidence(event);
+
+    ICalFormat format;
+    QString result = format.toString(cal, QString());
+
+    Incidence::Ptr i = format.fromString(result);
+    QVERIFY(i);
+    QCOMPARE(i->dtStart(), startDate);
+    // Qt::OffsetFromUTC is turned into Qt::Timezone with a "UTC+/-X" timezone right now
+    // but Qt::OffsetFromUTC would be equally correct here should this ever change in the future
+    QCOMPARE(i->dtStart().timeSpec(), Qt::TimeZone);
+    QCOMPARE(i->dtStart().timeZone().offsetFromUtc(i->dtStart()), 3600);
 }

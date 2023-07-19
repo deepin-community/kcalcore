@@ -50,6 +50,8 @@ This API needs serious cleaning up:
 /** Namespace for all KCalendarCore types. */
 namespace KCalendarCore
 {
+Q_NAMESPACE_EXPORT(KCALENDARCORE_EXPORT)
+
 class CalFilter;
 class Person;
 class ICalFormat;
@@ -103,6 +105,7 @@ enum AccessMode {
     ReadOnly,
     ReadWrite,
 };
+Q_ENUM_NS(AccessMode)
 
 /**
   @brief
@@ -134,7 +137,8 @@ class KCALENDARCORE_EXPORT Calendar : public QObject, public CustomProperties, p
     Q_PROPERTY(QString id READ id WRITE setId NOTIFY idChanged)
     Q_PROPERTY(QString name READ name WRITE setName NOTIFY nameChanged)
     Q_PROPERTY(QIcon icon READ icon WRITE setIcon NOTIFY iconChanged)
-    Q_PROPERTY(AccessMode accessMode READ accessMode WRITE setAccessMode NOTIFY accessModeChanged)
+    Q_PROPERTY(KCalendarCore::AccessMode accessMode READ accessMode WRITE setAccessMode NOTIFY accessModeChanged)
+    Q_PROPERTY(bool isLoading READ isLoading NOTIFY isLoadingChanged)
 
 public:
     /**
@@ -333,6 +337,13 @@ public:
      * @see accessMode()
      */
     void setAccessMode(const AccessMode mode);
+
+    /**
+     * Returns @c true if the calendar is still loading its data and thus
+     * read access will not return complete (or even any) results.
+     * @since 5.96
+     */
+    bool isLoading() const;
 
     /**
       Clears out the current calendar, freeing all used memory etc.
@@ -694,6 +705,7 @@ public:
     */
     virtual bool deleteEventInstances(const Event::Ptr &event) = 0;
 
+#if KCALENDARCORE_ENABLE_DEPRECATED_SINCE(5, 95)
     /**
       Sort a list of Events.
 
@@ -702,8 +714,30 @@ public:
       @param sortDirection specifies the SortDirection.
 
       @return a list of Events sorted as specified.
+
+      @deprecated since 5.95 Use the sortEvents(Event::List &&eventList, EventSortField sortField, SortDirection sortDirection)
+      overload instead. In the common case that you are sorting a list in-place, wrapping the @p eventList
+      argument with std::move will be all that's needed. In the less common case you actually want a copy,
+      create that explicitly first.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(
+        5,
+        95,
+        "Use sortEvents(Event::List &&eventList, EventSortField sortField, SortDirection sortDirection); see API docs for details.")
     static Event::List sortEvents(const Event::List &eventList, EventSortField sortField, SortDirection sortDirection);
+#endif
+    /**
+      Sort a list of Events.
+
+      @param eventList the list of events that should be sorted. The list is sorted in place and returned.
+      @param sortField specifies the EventSortField.
+      @param sortDirection specifies the SortDirection.
+
+      @return a list of Events sorted as specified.
+      @since 5.95
+    */
+    static Event::List sortEvents(Event::List &&eventList, EventSortField sortField, SortDirection sortDirection);
+
     /**
       Returns a sorted, filtered list of all Events for this Calendar.
 
@@ -766,6 +800,7 @@ public:
     */
     virtual Event::List rawEvents(EventSortField sortField = EventSortUnsorted, SortDirection sortDirection = SortDirectionAscending) const = 0;
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 95)
     /**
       Returns an unfiltered list of all Events which occur on the given
       timestamp.
@@ -774,8 +809,12 @@ public:
 
       @return the list of unfiltered Events occurring on the specified
       timestamp.
+
+      @deprecated since 5.95 use rawEventsForDate(dt.date(), dt.timeZone()) overload instead.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(5, 95, "Use rawEventsForDate(dt.date(), dt.timeZone()) insead")
     virtual Event::List rawEventsForDate(const QDateTime &dt) const = 0;
+#endif
 
     /**
       Returns an unfiltered list of all Events occurring within a date range.
@@ -891,6 +930,7 @@ public:
     */
     virtual bool deleteTodoInstances(const Todo::Ptr &todo) = 0;
 
+#if KCALENDARCORE_ENABLE_DEPRECATED_SINCE(5, 95)
     /**
       Sort a list of Todos.
 
@@ -899,8 +939,29 @@ public:
       @param sortDirection specifies the SortDirection.
 
       @return a list of Todos sorted as specified.
+
+      @deprecated since 5.95 Use the sortTodos(Todo::List &&todoList, TodoSortField sortField, SortDirection sortDirection)
+      overload instead. In the common case that you are sorting a list in-place, wrapping the @p todoList
+      argument with std::move will be all that's needed. In the less common case you actually want a copy,
+      create that explicitly first.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(5,
+                                     95,
+                                     "Use sortTodos(Todo::List &&todoList, TodoSortField sortField, SortDirection sortDirection); see API docs for details.")
     static Todo::List sortTodos(const Todo::List &todoList, TodoSortField sortField, SortDirection sortDirection);
+#endif
+    /**
+      Sort a list of Todos.
+
+      @param todoList the list of todos that should be sorted. The list is sorted in place and returned.
+      @param sortField specifies the TodoSortField.
+      @param sortDirection specifies the SortDirection.
+
+      @return a list of Todos sorted as specified.
+
+      @since 5.95
+    */
+    static Todo::List sortTodos(Todo::List &&todoList, TodoSortField sortField, SortDirection sortDirection);
 
     /**
       Returns a sorted, filtered list of all Todos for this Calendar.
@@ -1052,6 +1113,7 @@ public:
     */
     virtual bool deleteJournalInstances(const Journal::Ptr &journal) = 0;
 
+#if KCALENDARCORE_ENABLE_DEPRECATED_SINCE(5, 95)
     /**
       Sort a list of Journals.
 
@@ -1060,8 +1122,30 @@ public:
       @param sortDirection specifies the SortDirection.
 
       @return a list of Journals sorted as specified.
+
+      @deprecated since 5.95 Use the sortJournals(Journal::List &&journalList, JournalSortField sortField, SortDirection sortDirection)
+      overload instead. In the common case that you are sorting a list in-place, wrapping the @p journalList
+      argument with std::move will be all that's needed. In the less common case you actually want a copy,
+      create that explicitly first.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(
+        5,
+        95,
+        "Use sortJournals(Journal::List &&journalList, JournalSortField sortField, SortDirection sortDirection); see API docs for details.")
     static Journal::List sortJournals(const Journal::List &journalList, JournalSortField sortField, SortDirection sortDirection);
+#endif
+    /**
+      Sort a list of Journals.
+
+      @param journalList the list of journals that should be sorted. The list is sorted in place and returned.
+      @param sortField specifies the JournalSortField.
+      @param sortDirection specifies the SortDirection.
+
+      @return a list of Journals sorted as specified.
+      @since 5.95
+    */
+    static Journal::List sortJournals(Journal::List &&journalList, JournalSortField sortField, SortDirection sortDirection);
+
     /**
       Returns a sorted, filtered list of all Journals for this Calendar.
 
@@ -1406,6 +1490,15 @@ protected:
     bool deletionTracking() const;
 
     /**
+     * Sets the loading state of this calendar.
+     * This is false by default and only needs to be called for calendars
+     * that implement asynchronous loading.
+     * @since 5.96
+     * @see isLoading()
+     */
+    void setIsLoading(bool isLoading);
+
+    /**
       @copydoc
       IncidenceBase::virtual_hook()
     */
@@ -1452,6 +1545,13 @@ Q_SIGNALS:
      * @see owner()
      */
     void ownerChanged();
+
+    /**
+     * Emitted when the loading state changed.
+     * @since 5.96
+     * @see isLoading()
+     */
+    void isLoadingChanged();
 
 private:
     friend class ICalFormat;

@@ -64,6 +64,8 @@ class KCALENDARCORE_EXPORT Incidence : public IncidenceBase, public Recurrence::
     Q_PROPERTY(QString location READ location WRITE setLocation)
 #if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 89)
     Q_PROPERTY(bool hasGeo READ hasGeo WRITE setHasGeo)
+#else
+    Q_PROPERTY(bool hasGeo READ hasGeo)
 #endif
     Q_PROPERTY(float geoLatitude READ geoLatitude WRITE setGeoLatitude)
     Q_PROPERTY(float geoLongitude READ geoLongitude WRITE setGeoLongitude)
@@ -123,10 +125,23 @@ public:
     */
     typedef QVector<Ptr> List;
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
     /**
-      Constructs an empty incidence.*
+      Constructs an empty incidence.
+      @deprecated Use Incidence(IncidencePrivate *p).
     */
     Incidence();
+#else
+    Incidence() = delete;
+#endif
+
+    /**
+      Constructs an empty incidence.
+      @param p (non-null) a Private data object provided by the instantiated
+      class (Event, Todo, Journal, FreeBusy). It passes ownership of the object
+      to IncidenceBase.
+    */
+    Incidence(IncidencePrivate *p);
 
     /**
       Destroys an incidence.
@@ -571,7 +586,9 @@ public:
 
     /**
       Sets the incidence status to a standard #Status value.
-      Note that StatusX cannot be specified.
+      Events, Todos, and Journals each have a different set of
+      valid statuses.  Note that StatusX cannot be specified.
+      Invalid statuses are logged and ignored.
 
       @param status is the incidence #Status to set.
       @see status(), setCustomStatus().
@@ -869,11 +886,24 @@ public:
     Q_REQUIRED_RESULT static QStringList mimeTypes();
 
 protected:
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
     /**
       Copy constructor.
       @param other is the incidence to copy.
+      @deprecated Use Incidence(const Incidence &other, IncidencePrivate *p).
     */
     Incidence(const Incidence &other);
+#else
+    Incidence(const Incidence &) = delete;
+#endif
+
+    /**
+      @param other is the incidence to copy.
+      @param p (non-null) a Private data object provided by the instantiated
+      class (Event, Todo, Journal, FreeBusy). It passes ownership of the object
+      to IncidenceBase.
+    */
+    Incidence(const Incidence &other, IncidencePrivate *p);
 
     /**
       Compares this with Incidence @p incidence for equality.
@@ -902,10 +932,12 @@ private:
     Q_DECL_HIDDEN QVariantList attachmentsVariant() const;
     Q_DECL_HIDDEN QVariantList conferencesVariant() const;
 
-    //@cond PRIVATE:
-    friend class IncidencePrivate;
-    IncidencePrivate *const d;
-    //@endcond
+protected:
+    Q_DECLARE_PRIVATE(Incidence)
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
+    KCALENDARCORE_DEPRECATED_VERSION(5, 91, "Do not use")
+    IncidencePrivate *const _ = nullptr;    // TODO KF6 remove. ABI compatibility hack.
+#endif
 };
 
 }

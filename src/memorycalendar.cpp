@@ -586,7 +586,7 @@ Event::List MemoryCalendar::rawEventsForDate(const QDate &date, const QTimeZone 
     if (timeZone.isValid() && timeZone != this->timeZone()) {
         // We cannot use the hash table on date, since time zone is different.
         eventList = rawEvents(date, date, timeZone, false);
-        return Calendar::sortEvents(eventList, sortField, sortDirection);
+        return Calendar::sortEvents(std::move(eventList), sortField, sortDirection);
     }
 
     // Iterate over all non-recurring, single-day events that start on this date
@@ -621,7 +621,7 @@ Event::List MemoryCalendar::rawEventsForDate(const QDate &date, const QTimeZone 
         }
     }
 
-    return Calendar::sortEvents(eventList, sortField, sortDirection);
+    return Calendar::sortEvents(std::move(eventList), sortField, sortDirection);
 }
 
 Event::List MemoryCalendar::rawEvents(const QDate &start, const QDate &end, const QTimeZone &timeZone, bool inclusive) const
@@ -679,10 +679,12 @@ Event::List MemoryCalendar::rawEvents(const QDate &start, const QDate &end, cons
     return eventList;
 }
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 95)
 Event::List MemoryCalendar::rawEventsForDate(const QDateTime &kdt) const
 {
     return rawEventsForDate(kdt.date(), kdt.timeZone());
 }
+#endif
 
 Event::List MemoryCalendar::rawEvents(EventSortField sortField, SortDirection sortDirection) const
 {

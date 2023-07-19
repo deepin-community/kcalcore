@@ -8,6 +8,8 @@
 
   SPDX-License-Identifier: LGPL-2.0-or-later
 */
+
+#include "incidencebase.h"
 #include "recurrence.h"
 #include "recurrencehelper_p.h"
 #include "utils_p.h"
@@ -68,7 +70,7 @@ public:
 bool Recurrence::Private::operator==(const Recurrence::Private &p) const
 {
     //   qCDebug(KCALCORE_LOG) << mStartDateTime << p.mStartDateTime;
-    if ((mStartDateTime != p.mStartDateTime && (mStartDateTime.isValid() || p.mStartDateTime.isValid())) || mAllDay != p.mAllDay
+    if (!identical(mStartDateTime, p.mStartDateTime) || mAllDay != p.mAllDay
         || mRecurReadOnly != p.mRecurReadOnly || mExDates != p.mExDates || mExDateTimes != p.mExDateTimes || mRDates != p.mRDates
         || mRDateTimes != p.mRDateTimes || mRDateTimePeriods != p.mRDateTimePeriods) {
         return false;
@@ -475,7 +477,7 @@ void Recurrence::setEndDateTime(const QDateTime &dateTime)
         return;
     }
 
-    if (dateTime != rrule->endDt()) {
+    if (!identical(dateTime, rrule->endDt())) {
         rrule->setEndDt(dateTime);
         updated();
     }
@@ -1145,7 +1147,7 @@ QDateTime Recurrence::getNextDateTime(const QDateTime &preDateTime) const
         }
 
         QDateTime kdt(startDateTime());
-        for (const auto &date : qAsConst(d->mRDates)) {
+        for (const auto &date : std::as_const(d->mRDates)) {
             kdt.setDate(date);
             if (kdt > nextDT) {
                 dates << kdt;
@@ -1154,7 +1156,7 @@ QDateTime Recurrence::getNextDateTime(const QDateTime &preDateTime) const
         }
 
         // Add the next occurrences from all RRULEs.
-        for (const auto &rule : qAsConst(d->mRRules)) {
+        for (const auto &rule : std::as_const(d->mRRules)) {
             QDateTime dt = rule->getNextDate(nextDT);
             if (dt.isValid()) {
                 dates << dt;
@@ -1172,7 +1174,7 @@ QDateTime Recurrence::getNextDateTime(const QDateTime &preDateTime) const
         if (!std::binary_search(d->mExDates.constBegin(), d->mExDates.constEnd(), nextDT.date())
             && !std::binary_search(d->mExDateTimes.constBegin(), d->mExDateTimes.constEnd(), nextDT)) {
             bool allowed = true;
-            for (const auto &rule : qAsConst(d->mExRules)) {
+            for (const auto &rule : std::as_const(d->mExRules)) {
                 allowed = allowed && !rule->recursAt(nextDT);
             }
             if (allowed) {
@@ -1215,7 +1217,7 @@ QDateTime Recurrence::getPreviousDateTime(const QDateTime &afterDateTime) const
         }
 
         QDateTime kdt(startDateTime());
-        for (const auto &date : qAsConst(d->mRDates)) {
+        for (const auto &date : std::as_const(d->mRDates)) {
             kdt.setDate(date);
             if (kdt < prevDT) {
                 dates << kdt;
@@ -1224,7 +1226,7 @@ QDateTime Recurrence::getPreviousDateTime(const QDateTime &afterDateTime) const
         }
 
         // Add the previous occurrences from all RRULEs.
-        for (const auto &rule : qAsConst(d->mRRules)) {
+        for (const auto &rule : std::as_const(d->mRRules)) {
             QDateTime dt = rule->getPreviousDate(prevDT);
             if (dt.isValid()) {
                 dates << dt;
@@ -1242,7 +1244,7 @@ QDateTime Recurrence::getPreviousDateTime(const QDateTime &afterDateTime) const
         if (!std::binary_search(d->mExDates.constBegin(), d->mExDates.constEnd(), prevDT.date())
             && !std::binary_search(d->mExDateTimes.constBegin(), d->mExDateTimes.constEnd(), prevDT)) {
             bool allowed = true;
-            for (const auto &rule : qAsConst(d->mExRules)) {
+            for (const auto &rule : std::as_const(d->mExRules)) {
                 allowed = allowed && !rule->recursAt(prevDT);
             }
             if (allowed) {
@@ -1515,20 +1517,20 @@ KCALENDARCORE_EXPORT QDataStream &KCalendarCore::operator<<(QDataStream &out, KC
     }
 
     serializeQDateTimeList(out, r->d->mRDateTimes);
-    out << r->d->mRDateTimePeriods.size();
+    out << (qint32)r->d->mRDateTimePeriods.size();
     for (auto it = r->d->mRDateTimePeriods.cbegin(); it != r->d->mRDateTimePeriods.cend(); ++it) {
         out << it.key() << it.value();
     }
     serializeQDateTimeList(out, r->d->mExDateTimes);
     out << r->d->mRDates;
     serializeQDateTimeAsKDateTime(out, r->d->mStartDateTime);
-    out << r->d->mCachedType << r->d->mAllDay << r->d->mRecurReadOnly << r->d->mExDates << r->d->mExRules.count() << r->d->mRRules.count();
+    out << r->d->mCachedType << r->d->mAllDay << r->d->mRecurReadOnly << r->d->mExDates << (qint32)r->d->mExRules.count() << (qint32)r->d->mRRules.count();
 
-    for (RecurrenceRule *rule : qAsConst(r->d->mExRules)) {
+    for (RecurrenceRule *rule : std::as_const(r->d->mExRules)) {
         out << rule;
     }
 
-    for (RecurrenceRule *rule : qAsConst(r->d->mRRules)) {
+    for (RecurrenceRule *rule : std::as_const(r->d->mRRules)) {
         out << rule;
     }
 

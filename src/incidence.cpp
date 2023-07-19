@@ -37,7 +37,8 @@ using namespace KCalendarCore;
 IncidencePrivate::IncidencePrivate() = default;
 
 IncidencePrivate::IncidencePrivate(const IncidencePrivate &p)
-    : mCreated(p.mCreated)
+    : IncidenceBasePrivate(p)
+    , mCreated(p.mCreated)
     , mDescription(p.mDescription)
     , mSummary(p.mSummary)
     , mLocation(p.mLocation)
@@ -61,6 +62,11 @@ IncidencePrivate::IncidencePrivate(const IncidencePrivate &p)
     , mLocationIsRich(p.mLocationIsRich)
     , mThisAndFuture(p.mThisAndFuture)
     , mLocalOnly(false)
+{
+}
+
+IncidencePrivate::IncidencePrivate(const Incidence &other)
+    : IncidencePrivate(*other.d_func())
 {
 }
 
@@ -101,7 +107,7 @@ void IncidencePrivate::init(Incidence *q, const IncidencePrivate &other)
     // We need to really duplicate the objects stored therein, otherwise deleting
     // i will also delete all attachments from this object (setAutoDelete...)
     mAlarms.reserve(other.mAlarms.count());
-    for (const Alarm::Ptr &alarm : qAsConst(other.mAlarms)) {
+    for (const Alarm::Ptr &alarm : std::as_const(other.mAlarms)) {
         Alarm::Ptr b(new Alarm(*alarm.data()));
         b->setParent(q);
         mAlarms.append(b);
@@ -115,22 +121,44 @@ void IncidencePrivate::init(Incidence *q, const IncidencePrivate &other)
         mRecurrence = nullptr;
     }
 }
+
+bool IncidencePrivate::validStatus(Incidence::Status status)
+{
+    return status == Incidence::StatusNone;
+}
 //@endcond
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
 Incidence::Incidence()
-    : IncidenceBase()
-    , d(new KCalendarCore::IncidencePrivate)
+    : IncidenceBase(new IncidencePrivate)
 {
     recreate();
     resetDirtyFields();
 }
 
 Incidence::Incidence(const Incidence &i)
-    : IncidenceBase(i)
+    : IncidenceBase(i, new IncidencePrivate(*(i.d_func())))
     , Recurrence::RecurrenceObserver()
-    , d(new KCalendarCore::IncidencePrivate(*i.d))
 {
-    d->init(this, *i.d);
+    Q_D(Incidence);
+    d->init(this, *(i.d_func()));
+    resetDirtyFields();
+}
+#endif
+
+Incidence::Incidence(IncidencePrivate *p)
+    : IncidenceBase(p)
+{
+    recreate();
+    resetDirtyFields();
+}
+
+Incidence::Incidence(const Incidence &other, IncidencePrivate *p)
+    : IncidenceBase(other, p)
+    , Recurrence::RecurrenceObserver()
+{
+    Q_D(Incidence);
+    d->init(this, *(other.d_func()));
     resetDirtyFields();
 }
 
@@ -138,11 +166,11 @@ Incidence::~Incidence()
 {
     // Alarm has a raw incidence pointer, so we must set it to 0
     // so Alarm doesn't use it after Incidence is destroyed
-    for (const Alarm::Ptr &alarm : qAsConst(d->mAlarms)) {
+    Q_D(const Incidence);
+    for (const Alarm::Ptr &alarm : std::as_const(d->mAlarms)) {
         alarm->setParent(nullptr);
     }
     delete d->mRecurrence;
-    delete d;
 }
 
 //@cond PRIVATE
@@ -155,12 +183,13 @@ static bool stringCompare(const QString &s1, const QString &s2)
 //@endcond
 IncidenceBase &Incidence::assign(const IncidenceBase &other)
 {
+    Q_D(Incidence);
     if (&other != this) {
         d->clear();
         // TODO: should relations be cleared out, as in destructor???
         IncidenceBase::assign(other);
         const Incidence *i = static_cast<const Incidence *>(&other);
-        d->init(this, *(i->d));
+        d->init(this, *(i->d_func()));
     }
 
     return *this;
@@ -204,14 +233,16 @@ bool Incidence::equals(const IncidenceBase &incidence) const
         return false;
     }
 
-    bool recurrenceEqual = (d->mRecurrence == nullptr && i2->d->mRecurrence == nullptr);
+    Q_D(const Incidence);
+    bool recurrenceEqual = (d->mRecurrence == nullptr && i2->d_func()->mRecurrence == nullptr);
     if (!recurrenceEqual) {
         recurrence(); // create if doesn't exist
         i2->recurrence(); // create if doesn't exist
-        recurrenceEqual = d->mRecurrence != nullptr && i2->d->mRecurrence != nullptr && *d->mRecurrence == *i2->d->mRecurrence;
+        recurrenceEqual = d->mRecurrence != nullptr && i2->d_func()->mRecurrence != nullptr
+            && *d->mRecurrence == *i2->d_func()->mRecurrence;
     }
 
-    if (!qFuzzyCompare(d->mGeoLatitude, i2->d->mGeoLatitude) || !qFuzzyCompare(d->mGeoLongitude, i2->d->mGeoLongitude)) {
+    if (!qFuzzyCompare(d->mGeoLatitude, i2->d_func()->mGeoLatitude) || !qFuzzyCompare(d->mGeoLongitude, i2->d_func()->mGeoLongitude)) {
         return false;
     }
     // clang-format off
@@ -225,8 +256,8 @@ bool Incidence::equals(const IncidenceBase &incidence) const
         && categories() == i2->categories()
         && stringCompare(relatedTo(), i2->relatedTo())
         && resources() == i2->resources()
-        && d->mStatus == i2->d->mStatus
-        && (d->mStatus == StatusNone || stringCompare(d->mStatusString, i2->d->mStatusString))
+        && d->mStatus == i2->d_func()->mStatus
+        && (d->mStatus == StatusNone || stringCompare(d->mStatusString, i2->d_func()->mStatusString))
         && secrecy() == i2->secrecy()
         && priority() == i2->priority()
         && stringCompare(location(), i2->location())
@@ -259,6 +290,7 @@ void Incidence::recreate()
 
 void Incidence::setLastModified(const QDateTime &lm)
 {
+    Q_D(const Incidence);
     if (!d->mLocalOnly) {
         IncidenceBase::setLastModified(lm);
     }
@@ -266,6 +298,7 @@ void Incidence::setLastModified(const QDateTime &lm)
 
 void Incidence::setReadOnly(bool readOnly)
 {
+    Q_D(const Incidence);
     IncidenceBase::setReadOnly(readOnly);
     if (d->mRecurrence) {
         d->mRecurrence->setRecurReadOnly(readOnly);
@@ -277,11 +310,13 @@ void Incidence::setLocalOnly(bool localOnly)
     if (mReadOnly) {
         return;
     }
+    Q_D(Incidence);
     d->mLocalOnly = localOnly;
 }
 
 bool Incidence::localOnly() const
 {
+    Q_D(const Incidence);
     return d->mLocalOnly;
 }
 
@@ -290,6 +325,7 @@ void Incidence::setAllDay(bool allDay)
     if (mReadOnly) {
         return;
     }
+    Q_D(const Incidence);
     if (d->mRecurrence) {
         d->mRecurrence->setAllDay(allDay);
     }
@@ -298,6 +334,7 @@ void Incidence::setAllDay(bool allDay)
 
 void Incidence::setCreated(const QDateTime &created)
 {
+    Q_D(Incidence);
     if (mReadOnly || d->mLocalOnly) {
         return;
     }
@@ -313,11 +350,13 @@ void Incidence::setCreated(const QDateTime &created)
 
 QDateTime Incidence::created() const
 {
+    Q_D(const Incidence);
     return d->mCreated;
 }
 
 void Incidence::setRevision(int rev)
 {
+    Q_D(Incidence);
     if (mReadOnly || d->mLocalOnly) {
         return;
     }
@@ -330,11 +369,13 @@ void Incidence::setRevision(int rev)
 
 int Incidence::revision() const
 {
+    Q_D(const Incidence);
     return d->mRevision;
 }
 
 void Incidence::setDtStart(const QDateTime &dt)
 {
+    Q_D(const Incidence);
     IncidenceBase::setDtStart(dt);
     if (d->mRecurrence && dirtyFields().contains(FieldDtStart)) {
         d->mRecurrence->setStartDateTime(dt, allDay());
@@ -343,6 +384,7 @@ void Incidence::setDtStart(const QDateTime &dt)
 
 void Incidence::shiftTimes(const QTimeZone &oldZone, const QTimeZone &newZone)
 {
+    Q_D(const Incidence);
     IncidenceBase::shiftTimes(oldZone, newZone);
     if (d->mRecurrence) {
         d->mRecurrence->shiftTimes(oldZone, newZone);
@@ -363,6 +405,7 @@ void Incidence::setDescription(const QString &description, bool isRich)
         return;
     }
     update();
+    Q_D(Incidence);
     d->mDescription = description;
     d->mDescriptionIsRich = isRich;
     setFieldDirty(FieldDescription);
@@ -376,11 +419,13 @@ void Incidence::setDescription(const QString &description)
 
 QString Incidence::description() const
 {
+    Q_D(const Incidence);
     return d->mDescription;
 }
 
 QString Incidence::richDescription() const
 {
+    Q_D(const Incidence);
     if (descriptionIsRich()) {
         return d->mDescription;
     } else {
@@ -390,6 +435,7 @@ QString Incidence::richDescription() const
 
 bool Incidence::descriptionIsRich() const
 {
+    Q_D(const Incidence);
     return d->mDescriptionIsRich;
 }
 
@@ -398,6 +444,7 @@ void Incidence::setSummary(const QString &summary, bool isRich)
     if (mReadOnly) {
         return;
     }
+    Q_D(Incidence);
     if (d->mSummary != summary || d->mSummaryIsRich != isRich) {
         update();
         d->mSummary = summary;
@@ -414,11 +461,13 @@ void Incidence::setSummary(const QString &summary)
 
 QString Incidence::summary() const
 {
+    Q_D(const Incidence);
     return d->mSummary;
 }
 
 QString Incidence::richSummary() const
 {
+    Q_D(const Incidence);
     if (summaryIsRich()) {
         return d->mSummary;
     } else {
@@ -428,6 +477,7 @@ QString Incidence::richSummary() const
 
 bool Incidence::summaryIsRich() const
 {
+    Q_D(const Incidence);
     return d->mSummaryIsRich;
 }
 
@@ -437,6 +487,7 @@ void Incidence::setCategories(const QStringList &categories)
         return;
     }
 
+    Q_D(Incidence);
     update();
     d->mCategories = categories;
     setFieldDirty(FieldCategories);
@@ -451,6 +502,7 @@ void Incidence::setCategories(const QString &catStr)
     update();
     setFieldDirty(FieldCategories);
 
+    Q_D(Incidence);
     d->mCategories.clear();
 
     if (catStr.isEmpty()) {
@@ -469,11 +521,13 @@ void Incidence::setCategories(const QString &catStr)
 
 QStringList Incidence::categories() const
 {
+    Q_D(const Incidence);
     return d->mCategories;
 }
 
 QString Incidence::categoriesStr() const
 {
+    Q_D(const Incidence);
     return d->mCategories.join(QLatin1Char(','));
 }
 
@@ -482,6 +536,7 @@ void Incidence::setRelatedTo(const QString &relatedToUid, RelType relType)
     // TODO: RFC says that an incidence can have more than one related-to field
     // even for the same relType.
 
+    Q_D(Incidence);
     if (d->mRelatedToUid[relType] != relatedToUid) {
         update();
         d->mRelatedToUid[relType] = relatedToUid;
@@ -492,6 +547,7 @@ void Incidence::setRelatedTo(const QString &relatedToUid, RelType relType)
 
 QString Incidence::relatedTo(RelType relType) const
 {
+    Q_D(const Incidence);
     return d->mRelatedToUid.value(relType);
 }
 
@@ -500,6 +556,7 @@ void Incidence::setColor(const QString &colorName)
     if (mReadOnly) {
         return;
     }
+    Q_D(Incidence);
     if (!stringCompare(d->mColor, colorName)) {
         update();
         d->mColor = colorName;
@@ -510,6 +567,7 @@ void Incidence::setColor(const QString &colorName)
 
 QString Incidence::color() const
 {
+    Q_D(const Incidence);
     return d->mColor;
 }
 
@@ -517,6 +575,7 @@ QString Incidence::color() const
 
 Recurrence *Incidence::recurrence() const
 {
+    Q_D(const Incidence);
     if (!d->mRecurrence) {
         d->mRecurrence = new Recurrence();
         d->mRecurrence->setStartDateTime(dateTime(RoleRecurrenceStart), allDay());
@@ -530,12 +589,14 @@ Recurrence *Incidence::recurrence() const
 
 void Incidence::clearRecurrence()
 {
+    Q_D(const Incidence);
     delete d->mRecurrence;
     d->mRecurrence = nullptr;
 }
 
 ushort Incidence::recurrenceType() const
 {
+    Q_D(const Incidence);
     if (d->mRecurrence) {
         return d->mRecurrence->recurrenceType();
     } else {
@@ -545,6 +606,7 @@ ushort Incidence::recurrenceType() const
 
 bool Incidence::recurs() const
 {
+    Q_D(const Incidence);
     if (d->mRecurrence) {
         return d->mRecurrence->recurs();
     } else {
@@ -554,11 +616,13 @@ bool Incidence::recurs() const
 
 bool Incidence::recursOn(const QDate &date, const QTimeZone &timeZone) const
 {
+    Q_D(const Incidence);
     return d->mRecurrence && d->mRecurrence->recursOn(date, timeZone);
 }
 
 bool Incidence::recursAt(const QDateTime &qdt) const
 {
+    Q_D(const Incidence);
     return d->mRecurrence && d->mRecurrence->recursAt(qdt);
 }
 
@@ -662,6 +726,7 @@ void Incidence::addAttachment(const Attachment &attachment)
         return;
     }
 
+    Q_D(Incidence);
     update();
     d->mAttachments.append(attachment);
     setFieldDirty(FieldAttachment);
@@ -670,6 +735,7 @@ void Incidence::addAttachment(const Attachment &attachment)
 
 void Incidence::deleteAttachments(const QString &mime)
 {
+    Q_D(Incidence);
     auto it = std::remove_if(d->mAttachments.begin(), d->mAttachments.end(), [&mime](const Attachment &a) {
         return a.mimeType() == mime;
     });
@@ -683,13 +749,15 @@ void Incidence::deleteAttachments(const QString &mime)
 
 Attachment::List Incidence::attachments() const
 {
+    Q_D(const Incidence);
     return d->mAttachments;
 }
 
 Attachment::List Incidence::attachments(const QString &mime) const
 {
+    Q_D(const Incidence);
     Attachment::List attachments;
-    for (const Attachment &attachment : qAsConst(d->mAttachments)) {
+    for (const Attachment &attachment : std::as_const(d->mAttachments)) {
         if (attachment.mimeType() == mime) {
             attachments.append(attachment);
         }
@@ -699,6 +767,7 @@ Attachment::List Incidence::attachments(const QString &mime) const
 
 void Incidence::clearAttachments()
 {
+    Q_D(Incidence);
     update();
     setFieldDirty(FieldAttachment);
     d->mAttachments.clear();
@@ -712,6 +781,7 @@ void Incidence::setResources(const QStringList &resources)
     }
 
     update();
+    Q_D(Incidence);
     d->mResources = resources;
     setFieldDirty(FieldResources);
     updated();
@@ -719,6 +789,7 @@ void Incidence::setResources(const QStringList &resources)
 
 QStringList Incidence::resources() const
 {
+    Q_D(const Incidence);
     return d->mResources;
 }
 
@@ -734,6 +805,7 @@ void Incidence::setPriority(int priority)
     }
 
     update();
+    Q_D(Incidence);
     d->mPriority = priority;
     setFieldDirty(FieldPriority);
     updated();
@@ -741,20 +813,27 @@ void Incidence::setPriority(int priority)
 
 int Incidence::priority() const
 {
+    Q_D(const Incidence);
     return d->mPriority;
 }
 
 void Incidence::setStatus(Incidence::Status status)
 {
-    if (mReadOnly || status == StatusX) {
+    if (mReadOnly) {
+        qCWarning(KCALCORE_LOG)  << "Attempt to set status of read-only incidence";
         return;
     }
 
-    update();
-    d->mStatus = status;
-    d->mStatusString.clear();
-    setFieldDirty(FieldStatus);
-    updated();
+    Q_D(Incidence);
+    if (d->validStatus(status)) {
+        update();
+        d->mStatus = status;
+        d->mStatusString.clear();
+        setFieldDirty(FieldStatus);
+        updated();
+    } else {
+        qCWarning(KCALCORE_LOG)  << "Ignoring invalid status" << status << "for" << typeStr();
+    }
 }
 
 void Incidence::setCustomStatus(const QString &status)
@@ -764,6 +843,7 @@ void Incidence::setCustomStatus(const QString &status)
     }
 
     update();
+    Q_D(Incidence);
     d->mStatus = status.isEmpty() ? StatusNone : StatusX;
     d->mStatusString = status;
     setFieldDirty(FieldStatus);
@@ -772,11 +852,13 @@ void Incidence::setCustomStatus(const QString &status)
 
 Incidence::Status Incidence::status() const
 {
+    Q_D(const Incidence);
     return d->mStatus;
 }
 
 QString Incidence::customStatus() const
 {
+    Q_D(const Incidence);
     if (d->mStatus == StatusX) {
         return d->mStatusString;
     } else {
@@ -791,6 +873,7 @@ void Incidence::setSecrecy(Incidence::Secrecy secrecy)
     }
 
     update();
+    Q_D(Incidence);
     d->mSecrecy = secrecy;
     setFieldDirty(FieldSecrecy);
     updated();
@@ -798,16 +881,19 @@ void Incidence::setSecrecy(Incidence::Secrecy secrecy)
 
 Incidence::Secrecy Incidence::secrecy() const
 {
+    Q_D(const Incidence);
     return d->mSecrecy;
 }
 
 Alarm::List Incidence::alarms() const
 {
+    Q_D(const Incidence);
     return d->mAlarms;
 }
 
 Alarm::Ptr Incidence::newAlarm()
 {
+    Q_D(Incidence);
     Alarm::Ptr alarm(new Alarm(this));
     addAlarm(alarm);
     return alarm;
@@ -815,6 +901,7 @@ Alarm::Ptr Incidence::newAlarm()
 
 void Incidence::addAlarm(const Alarm::Ptr &alarm)
 {
+    Q_D(Incidence);
     update();
     d->mAlarms.append(alarm);
     setFieldDirty(FieldAlarms);
@@ -823,6 +910,7 @@ void Incidence::addAlarm(const Alarm::Ptr &alarm)
 
 void Incidence::removeAlarm(const Alarm::Ptr &alarm)
 {
+    Q_D(Incidence);
     const int index = d->mAlarms.indexOf(alarm);
     if (index > -1) {
         update();
@@ -835,6 +923,7 @@ void Incidence::removeAlarm(const Alarm::Ptr &alarm)
 void Incidence::clearAlarms()
 {
     update();
+    Q_D(Incidence);
     d->mAlarms.clear();
     setFieldDirty(FieldAlarms);
     updated();
@@ -842,6 +931,7 @@ void Incidence::clearAlarms()
 
 bool Incidence::hasEnabledAlarms() const
 {
+    Q_D(const Incidence);
     return std::any_of(d->mAlarms.cbegin(), d->mAlarms.cend(), [](const Alarm::Ptr &alarm) {
         return alarm->enabled();
     });
@@ -849,12 +939,14 @@ bool Incidence::hasEnabledAlarms() const
 
 Conference::List Incidence::conferences() const
 {
+    Q_D(const Incidence);
     return d->mConferences;
 }
 
 void Incidence::addConference(const Conference &conference)
 {
     update();
+    Q_D(Incidence);
     d->mConferences.push_back(conference);
     setFieldDirty(FieldConferences);
     updated();
@@ -863,6 +955,7 @@ void Incidence::addConference(const Conference &conference)
 void Incidence::setConferences(const Conference::List &conferences)
 {
     update();
+    Q_D(Incidence);
     d->mConferences = conferences;
     setFieldDirty(FieldConferences);
     updated();
@@ -871,6 +964,7 @@ void Incidence::setConferences(const Conference::List &conferences)
 void Incidence::clearConferences()
 {
     update();
+    Q_D(Incidence);
     d->mConferences.clear();
     setFieldDirty(FieldConferences);
     updated();
@@ -882,6 +976,7 @@ void Incidence::setLocation(const QString &location, bool isRich)
         return;
     }
 
+    Q_D(Incidence);
     if (d->mLocation != location || d->mLocationIsRich != isRich) {
         update();
         d->mLocation = location;
@@ -898,11 +993,13 @@ void Incidence::setLocation(const QString &location)
 
 QString Incidence::location() const
 {
+    Q_D(const Incidence);
     return d->mLocation;
 }
 
 QString Incidence::richLocation() const
 {
+    Q_D(const Incidence);
     if (locationIsRich()) {
         return d->mLocation;
     } else {
@@ -912,6 +1009,7 @@ QString Incidence::richLocation() const
 
 bool Incidence::locationIsRich() const
 {
+    Q_D(const Incidence);
     return d->mLocationIsRich;
 }
 
@@ -920,6 +1018,7 @@ void Incidence::setSchedulingID(const QString &sid, const QString &uid)
     if (!uid.isEmpty()) {
         setUid(uid);
     }
+    Q_D(Incidence);
     if (sid != d->mSchedulingID) {
         update();
         d->mSchedulingID = sid;
@@ -930,6 +1029,7 @@ void Incidence::setSchedulingID(const QString &sid, const QString &uid)
 
 QString Incidence::schedulingID() const
 {
+    Q_D(const Incidence);
     if (d->mSchedulingID.isNull()) {
         // Nothing set, so use the normal uid
         return uid();
@@ -939,6 +1039,7 @@ QString Incidence::schedulingID() const
 
 bool Incidence::hasGeo() const
 {
+    Q_D(const Incidence);
     // For internal consistency, return false if either coordinate is invalid.
     return d->mGeoLatitude != INVALID_LATLON && d->mGeoLongitude != INVALID_LATLON;
 }
@@ -949,6 +1050,7 @@ void Incidence::setHasGeo(bool hasGeo)
         return;
     }
 
+    Q_D(Incidence);
     if (!hasGeo) {
         update();
         d->mGeoLatitude = INVALID_LATLON;
@@ -962,6 +1064,7 @@ void Incidence::setHasGeo(bool hasGeo)
 #endif
 float Incidence::geoLatitude() const
 {
+    Q_D(const Incidence);
     // For internal consistency, both coordinates are considered invalid if either is.
     return (INVALID_LATLON == d->mGeoLongitude) ? INVALID_LATLON : d->mGeoLatitude;
 }
@@ -980,6 +1083,7 @@ void Incidence::setGeoLatitude(float geolatitude)
         return;
     }
 
+    Q_D(Incidence);
     update();
     d->mGeoLatitude = geolatitude;
     setFieldDirty(FieldGeoLatitude);
@@ -988,6 +1092,7 @@ void Incidence::setGeoLatitude(float geolatitude)
 
 float Incidence::geoLongitude() const
 {
+    Q_D(const Incidence);
     // For internal consistency, both coordinates are considered invalid if either is.
     return (INVALID_LATLON == d->mGeoLatitude) ? INVALID_LATLON : d->mGeoLongitude;
 }
@@ -1006,6 +1111,7 @@ void Incidence::setGeoLongitude(float geolongitude)
         return;
     }
 
+    Q_D(Incidence);
     update();
     d->mGeoLongitude = geolongitude;
     setFieldDirty(FieldGeoLongitude);
@@ -1014,21 +1120,25 @@ void Incidence::setGeoLongitude(float geolongitude)
 
 bool Incidence::hasRecurrenceId() const
 {
+    Q_D(const Incidence);
     return (allDay() && d->mRecurrenceId.date().isValid()) || d->mRecurrenceId.isValid();
 }
 
 QDateTime Incidence::recurrenceId() const
 {
+    Q_D(const Incidence);
     return d->mRecurrenceId;
 }
 
 void Incidence::setThisAndFuture(bool thisAndFuture)
 {
+    Q_D(Incidence);
     d->mThisAndFuture = thisAndFuture;
 }
 
 bool Incidence::thisAndFuture() const
 {
+    Q_D(const Incidence);
     return d->mThisAndFuture;
 }
 
@@ -1036,6 +1146,7 @@ void Incidence::setRecurrenceId(const QDateTime &recurrenceId)
 {
     if (!mReadOnly) {
         update();
+        Q_D(Incidence);
         d->mRecurrenceId = recurrenceId;
         setFieldDirty(FieldRecurrenceId);
         updated();
@@ -1047,6 +1158,7 @@ void Incidence::setRecurrenceId(const QDateTime &recurrenceId)
     belongs to. */
 void Incidence::recurrenceUpdated(Recurrence *recurrence)
 {
+    Q_D(const Incidence);
     if (recurrence == d->mRecurrence) {
         update();
         setFieldDirty(FieldRecurrence);
@@ -1094,27 +1206,28 @@ QStringList Incidence::mimeTypes()
 
 void Incidence::serialize(QDataStream &out) const
 {
+    Q_D(const Incidence);
     serializeQDateTimeAsKDateTime(out, d->mCreated);
     out << d->mRevision << d->mDescription << d->mDescriptionIsRich << d->mSummary << d->mSummaryIsRich << d->mLocation << d->mLocationIsRich << d->mCategories
         << d->mResources << d->mStatusString << d->mPriority << d->mSchedulingID << d->mGeoLatitude << d->mGeoLongitude
         << hasGeo();    // No longer used, but serialized/deserialized for compatibility.
     serializeQDateTimeAsKDateTime(out, d->mRecurrenceId);
-    out << d->mThisAndFuture << d->mLocalOnly << d->mStatus << d->mSecrecy << (d->mRecurrence ? true : false) << d->mAttachments.count() << d->mAlarms.count()
-        << d->mConferences.count() << d->mRelatedToUid;
+    out << d->mThisAndFuture << d->mLocalOnly << d->mStatus << d->mSecrecy << (d->mRecurrence ? true : false) << (qint32)d->mAttachments.count()
+        << (qint32)d->mAlarms.count() << (qint32)d->mConferences.count() << d->mRelatedToUid;
 
     if (d->mRecurrence) {
         out << d->mRecurrence;
     }
 
-    for (const Attachment &attachment : qAsConst(d->mAttachments)) {
+    for (const Attachment &attachment : std::as_const(d->mAttachments)) {
         out << attachment;
     }
 
-    for (const Alarm::Ptr &alarm : qAsConst(d->mAlarms)) {
+    for (const Alarm::Ptr &alarm : std::as_const(d->mAlarms)) {
         out << alarm;
     }
 
-    for (const Conference &conf : qAsConst(d->mConferences)) {
+    for (const Conference &conf : std::as_const(d->mConferences)) {
         out << conf;
     }
 }
@@ -1129,6 +1242,7 @@ void Incidence::deserialize(QDataStream &in)
     int alarmCount;
     int conferencesCount;
     QMap<int, QString> relatedToUid;
+    Q_D(Incidence);
     deserializeKDateTimeAsQDateTime(in, d->mCreated);
     in >> d->mRevision >> d->mDescription >> d->mDescriptionIsRich >> d->mSummary >> d->mSummaryIsRich >> d->mLocation >> d->mLocationIsRich >> d->mCategories
         >> d->mResources >> d->mStatusString >> d->mPriority >> d->mSchedulingID >> d->mGeoLatitude >> d->mGeoLongitude >> hasGeo;
@@ -1195,10 +1309,12 @@ QVariantList toVariantList(int size, typename QVector<T>::ConstIterator begin, t
 
 QVariantList Incidence::attachmentsVariant() const
 {
+    Q_D(const Incidence);
     return toVariantList<Attachment>(d->mAttachments.size(), d->mAttachments.cbegin(), d->mAttachments.cend());
 }
 
 QVariantList Incidence::conferencesVariant() const
 {
+    Q_D(const Incidence);
     return toVariantList<Conference>(d->mConferences.size(), d->mConferences.cbegin(), d->mConferences.cend());
 }

@@ -17,6 +17,13 @@ Q_DECLARE_METATYPE(KCalendarCore::Incidence::DateTimeRole)
 
 using namespace KCalendarCore;
 
+const auto TEST_TZ = "Europe/Paris";
+
+void IncidenceTest::initTestCase()
+{
+    qputenv("TZ", TEST_TZ);
+}
+
 void IncidenceTest::testDtStartChange()
 {
     QDate dt = QDate::currentDate();
@@ -48,6 +55,26 @@ void IncidenceTest::testDtStartChange()
     inc.setDtStart(QDateTime(dt, {}).addDays(1));
     QCOMPARE(inc.dirtyFields(), QSet<IncidenceBase::Field>() << IncidenceBase::FieldDtStart << IncidenceBase::FieldRecurrence);
     QCOMPARE(inc.recurrence()->startDateTime(), QDateTime(dt, {}).addDays(1));
+}
+
+void IncidenceTest::testDtStartEqual()
+{
+    QDateTime dt {QDate::currentDate(), QTime::currentTime(), QTimeZone(TEST_TZ)};
+    QVERIFY(dt.timeSpec() == Qt::TimeZone);
+
+    Event i1;
+    i1.setDtStart(dt);
+    auto i2 = i1.clone();
+    QVERIFY(i1 == *i2);
+
+    // Create a "floating" datetime, which represents the same instant in real time
+    // because we're still running in the test's time zone.
+    dt.setTimeSpec(Qt::LocalTime);
+
+    i1.setDtStart(dt);
+    QVERIFY(i1 != *i2);
+    i2->setDtStart(dt);
+    QVERIFY(i1 == *i2);
 }
 
 void IncidenceTest::testSummaryChange()
@@ -132,14 +159,12 @@ void IncidenceTest::testGeo()
     inc.setGeoLongitude(180.0);
 #if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 89)
     inc.setHasGeo(false);
-#endif
     QCOMPARE(inc.geoLatitude(), INVALID_LATLON);
     QCOMPARE(inc.geoLongitude(), INVALID_LATLON);
-#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 89)
     inc.setHasGeo(true);
-#endif
     inc.setGeoLatitude(90.0);
     inc.setGeoLongitude(180.0);
+#endif
     inc.setGeoLatitude(INVALID_LATLON);
     QCOMPARE(inc.hasGeo(), false);
     QCOMPARE(inc.geoLatitude(), INVALID_LATLON);

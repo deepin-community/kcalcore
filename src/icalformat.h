@@ -24,6 +24,7 @@
 namespace KCalendarCore
 {
 class FreeBusy;
+class ICalFormatPrivate;
 class Incidence;
 class IncidenceBase;
 class RecurrenceRule;
@@ -65,13 +66,16 @@ public:
     */
     bool save(const Calendar::Ptr &calendar, const QString &fileName) override;
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 97)
     /**
       @copydoc
       CalFormat::fromString()
-
-      @note The notebook is ignored and the default one is used
     */
-    bool fromString(const Calendar::Ptr &calendar, const QString &string, bool deleted = false, const QString &notebook = QString()) override;
+    KCALENDARCORE_DEPRECATED_VERSION(5, 97, "use fromString(const Calendar::Ptr &calendar, const QString &string, const QString &notebook)")
+    bool fromString(const Calendar::Ptr &calendar, const QString &string, bool deleted, const QString &notebook) override;
+#endif
+    // make CalFromat::fromString(const Calendar::Ptr &calendar, const QString&, const QString&) visible here as well
+    using CalFormat::fromString;
 
     /**
       Parses a string, returning the first iCal component as an Incidence.
@@ -104,6 +108,14 @@ public:
       @return true if successful; false otherwise.
     */
     Q_REQUIRED_RESULT bool fromString(RecurrenceRule *rule, const QString &string);
+
+    /**
+      Parses a string representation of a duration.
+
+      @param duration iCal representation of a duration.
+      @since 5.95
+    */
+    Q_REQUIRED_RESULT Duration durationFromString(const QString &duration) const;
 
     /**
       @copydoc
@@ -145,6 +157,14 @@ public:
       @return the QString will be Null if the conversion was unsuccessful.
     */
     Q_REQUIRED_RESULT QString toString(RecurrenceRule *rule);
+
+    /**
+      Converts a Duration to an iCal string.
+      @param duration a Duration object.
+      @return iCal formatted duration
+      @since 5.95
+    */
+    Q_REQUIRED_RESULT QString toString(const Duration &duration) const;
 
     /**
       Converts an Incidence to iCalendar formatted text.
@@ -207,17 +227,21 @@ public:
     Q_REQUIRED_RESULT QByteArray timeZoneId() const;
 
 protected:
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 96)
     /**
       @copydoc
       IncidenceBase::virtual_hook()
     */
     void virtual_hook(int id, void *data) override;
+#endif
 
 private:
     //@cond PRIVATE
     Q_DISABLE_COPY(ICalFormat)
-    class Private;
-    Private *const d;
+    Q_DECLARE_PRIVATE(ICalFormat)
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 96)
+    void *unused; // former dptr, just kept for ABI compatibility
+#endif
     //@endcond
 };
 

@@ -350,3 +350,194 @@ void ICalFormatTest::testDateTime()
     QVERIFY(event);
     QCOMPARE(dtStart, event->dtStart());
 }
+
+void ICalFormatTest::testNotebook()
+{
+    Event::Ptr event(new Event);
+    event->setDtStart(QDateTime(QDate(2022, 3, 21), QTime(8, 49), Qt::UTC));
+    Todo::Ptr todo(new Todo);
+    todo->setDtStart(QDateTime(QDate(2022, 3, 21), QTime(8, 49), Qt::UTC));
+    Journal::Ptr journal(new Journal);
+    journal->setDtStart(QDateTime(QDate(2022, 3, 21), QTime(8, 49), Qt::UTC));
+    MemoryCalendar::Ptr calendar(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(calendar->addEvent(event));
+    QVERIFY(calendar->addTodo(todo));
+    QVERIFY(calendar->addJournal(journal));
+
+    ICalFormat format;
+    const QString data = format.toString(calendar, QString());
+    QVERIFY(!format.exception());
+
+    calendar->close();
+    QVERIFY(!calendar->event(event->uid(), event->recurrenceId()));
+    QVERIFY(!calendar->todo(todo->uid(), todo->recurrenceId()));
+    QVERIFY(!calendar->journal(journal->uid(), journal->recurrenceId()));
+
+    const QString notebook(QString::fromLatin1("my-imported-notebook"));
+    QVERIFY(calendar->addNotebook(notebook, true));
+    QVERIFY(format.fromString(calendar, data, notebook));
+
+    Event::Ptr reloadedEvent = calendar->event(event->uid(), event->recurrenceId());
+    QVERIFY(reloadedEvent);
+    Todo::Ptr reloadedTodo = calendar->todo(todo->uid(), todo->recurrenceId());
+    QVERIFY(reloadedTodo);
+    Journal::Ptr reloadedJournal = calendar->journal(journal->uid(), journal->recurrenceId());
+    QVERIFY(reloadedJournal);
+
+    QCOMPARE(calendar->incidences(notebook).length(), 3);
+    QCOMPARE(calendar->notebook(reloadedEvent), notebook);
+    QCOMPARE(calendar->notebook(reloadedTodo), notebook);
+    QCOMPARE(calendar->notebook(reloadedJournal), notebook);
+}
+
+/**
+ * If an instance does not have a UID, one will be created for it.
+ */
+void ICalFormatTest::testUidGeneration()
+{
+    const QString serializedCalendar = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "DTSTAMP:20201103T161340Z\n"
+        "SUMMARY:test\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    ICalFormat format;
+    QVERIFY(format.fromString(calendar, serializedCalendar));
+    const auto events = calendar->events();
+    QCOMPARE(events.count(), 1);
+    const auto event = events[0];
+    QVERIFY( ! event->uid().isEmpty());
+}
+
+/**
+ * Generated UIDs do not depend on the order of properties.
+ */
+void ICalFormatTest::testUidGenerationStability()
+{
+    ICalFormat format;
+
+    const QString serializedCalendar1 = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "DTSTAMP:20201103T161340Z\n"
+        "SUMMARY:test\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar1 = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(calendar1, serializedCalendar1));
+    const auto events1 = calendar1->events();
+    QCOMPARE(events1.count(), 1);
+
+    const QString serializedCalendar2 = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "SUMMARY:test\n"
+        "DTSTAMP:20201103T161340Z\n"    // Reordered.
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar2 = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(calendar2, serializedCalendar2));
+    const auto events2 = calendar2->events();
+    QCOMPARE(events2.count(), 1);
+
+    const auto event1 = events1[0];
+    const auto event2 = events2[0];
+    QCOMPARE(event1->uid(), event2->uid());
+}
+
+/**
+ * Generated UIDs depend on property names and values.
+ */
+void ICalFormatTest::testUidGenerationUniqueness()
+{
+    ICalFormat format;
+
+    const QString serializedCalendar1 = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "DTSTAMP:20201103T161340Z\n"
+        "SUMMARY:test\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar1 = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(calendar1, serializedCalendar1));
+    const auto events1 = calendar1->events();
+    QCOMPARE(events1.count(), 1);
+
+    const QString serializedCalendar2 = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "DTSTART:20201103T161340Z\n"    // Property name change.
+        "SUMMARY:test\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar2 = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(calendar2, serializedCalendar2));
+    const auto events2 = calendar2->events();
+    QCOMPARE(events2.count(), 1);
+
+    const QString serializedCalendar3 = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "DTSTAMP:20201103T161341Z\n"    // Property value changed.
+        "SUMMARY:test\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR");
+    auto calendar3 = MemoryCalendar::Ptr(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(calendar3, serializedCalendar3));
+    const auto events3 = calendar3->events();
+    QCOMPARE(events3.count(), 1);
+
+    const auto event1 = events1[0];
+    const auto event2 = events2[0];
+    const auto event3 = events3[0];
+    QVERIFY(event1->uid() != event2->uid());
+    QVERIFY(event1->uid() != event3->uid());
+    QVERIFY(event2->uid() != event3->uid());
+}
+
+void ICalFormatTest::testIcalFormat()
+{
+    ICalFormat format;
+    auto duration = format.durationFromString(QStringLiteral("PT2H"));
+    QVERIFY(!duration.isNull());
+    QCOMPARE(duration.asSeconds(), 7200);
+    QCOMPARE(format.toString(duration), QLatin1String("PT2H"));
+}
+
+void ICalFormatTest::testNonTextCustomProperties()
+{
+    const auto input = QLatin1String(
+        "BEGIN:VCALENDAR\n"
+        "VERSION:2.0\n"
+        "BEGIN:VEVENT\n"
+        "X-APPLE-TRAVEL-START;ROUTING=CAR;VALUE=URI;X-ADDRESS=Bingerdenallee 1\\n\n"
+        " 6921 JN Duiven\\nNederland;X-TITLE=Home:\n"
+        "X-APPLE-TRAVEL-DURATION;VALUE=DURATION:PT45M\n"
+        "X-APPLE-STRUCTURED-LOCATION;VALUE=URI;X-ADDRESS=Olympus 1\\n3524 WB Utre\n"
+        " cht\\nThe Netherlands;X-APPLE-RADIUS=49.91307222863458;X-TITLE=Olympus 1\n"
+        " :geo:52.063921,5.128511\n"
+        "BEGIN:VALARM\n"
+        "TRIGGER;X-APPLE-RELATED-TRAVEL=-PT30M:-PT1H15M\n"
+        "END:VALARM\n"
+        "END:VEVENT\n"
+        "END:VCALENDAR\n");
+    ICalFormat format;
+    MemoryCalendar::Ptr cal(new MemoryCalendar(QTimeZone::utc()));
+    QVERIFY(format.fromString(cal, input));
+    const auto events = cal->events();
+    QCOMPARE(events.size(), 1);
+
+    const auto event = events[0];
+    QCOMPARE(event->nonKDECustomProperty("X-APPLE-TRAVEL-DURATION"), QLatin1String("PT45M"));
+    QCOMPARE(event->nonKDECustomProperty("X-APPLE-TRAVEL-START"), QString());
+    QCOMPARE(event->nonKDECustomProperty("X-APPLE-STRUCTURED-LOCATION"), QLatin1String("geo:52.063921,5.128511"));
+}

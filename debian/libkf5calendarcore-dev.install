@@ -1,6 +1,5 @@
 usr/include/KF5/KCalendarCore/
 usr/include/KF5/kcalcore_version.h
-usr/include/KF5/kcalendarcore_version.h
 usr/lib/*/cmake/KF5CalendarCore/
 usr/lib/*/libKF5CalendarCore.so
 usr/lib/*/pkgconfig/KF5CalendarCore.pc

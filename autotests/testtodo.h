@@ -19,6 +19,7 @@ private Q_SLOTS:
 
     void testValidity();
     void testCompare();
+    void testDtDueEqual();
     void testClone();
     void testCopyIncidence();
     void testCopyConstructor();
@@ -37,6 +38,7 @@ private Q_SLOTS:
     void testIconNameRecurringDue();
     void testCategoriesComparison();
     void testDtDueComparison();
+    void testDtDueChange();
 };
 
 #endif

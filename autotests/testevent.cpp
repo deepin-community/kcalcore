@@ -17,6 +17,13 @@ Q_DECLARE_METATYPE(KCalendarCore::Incidence::DateTimeRole)
 
 using namespace KCalendarCore;
 
+const auto TEST_TZ = "Europe/Paris";
+
+void EventTest::initTestCase()
+{
+    qputenv("TZ", TEST_TZ);
+}
+
 void EventTest::testSetRoles_data()
 {
     QTest::addColumn<QDateTime>("originalDtStart");
@@ -91,6 +98,26 @@ void EventTest::testCompare()
     QVERIFY(!(event1 == event2));
     QCOMPARE(event1.dtEnd(), event2.dtStart());
     QCOMPARE(event2.summary(), QStringLiteral("Event2 Summary"));
+}
+
+void EventTest::testDtEndEqual()
+{
+    QDateTime dt {QDate::currentDate(), QTime::currentTime(), QTimeZone(TEST_TZ)};
+    QVERIFY(dt.timeSpec() == Qt::TimeZone);
+
+    Event e1;
+    e1.setDtEnd(dt);
+    auto e2 = e1.clone();
+    QVERIFY(e1 == *e2);
+
+    // Create a "floating" datetime, which represents the same instant in real time
+    // because we're still running in the test's time zone.
+    dt.setTimeSpec(Qt::LocalTime);
+
+    e1.setDtEnd(dt);
+    QVERIFY(e1 != *e2);
+    e2->setDtEnd(dt);
+    QVERIFY(e1 == *e2);
 }
 
 void EventTest::testCompareAlarms()
@@ -252,14 +279,14 @@ void EventTest::testDtStartChange()
 {
     QDate dt = QDate::currentDate();
     Event event1;
-    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone(TEST_TZ)));
     event1.resetDirtyFields();
 
     event1.setDtStart(QDateTime(dt, QTime(1, 0, 0)));
     QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtStart});
     event1.resetDirtyFields();
 
-    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    event1.setDtStart(QDateTime(dt, QTime(1, 0, 0), QTimeZone(TEST_TZ)));
     QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtStart});
     event1.resetDirtyFields();
 }
@@ -287,7 +314,7 @@ void EventTest::testDtEndChange()
     QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
     event1.resetDirtyFields();
 
-    event1.setDtEnd(QDateTime(dt, QTime(1, 0, 0), QTimeZone("Europe/Paris")));
+    event1.setDtEnd(QDateTime(dt, QTime(1, 0, 0), QTimeZone(TEST_TZ)));
     QCOMPARE(event1.dirtyFields(), QSet<IncidenceBase::Field>{IncidenceBase::FieldDtEnd});
     event1.resetDirtyFields();
 

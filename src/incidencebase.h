@@ -104,6 +104,7 @@ class KCALENDARCORE_EXPORT IncidenceBase : public CustomProperties
     Q_PROPERTY(bool allDay READ allDay WRITE setAllDay)
     Q_PROPERTY(KCalendarCore::Person organizer READ organizer WRITE setOrganizer)
     Q_PROPERTY(QVariantList attendees READ attendeesVariant)
+    Q_PROPERTY(QUrl url READ url WRITE setUrl)
 
 public:
     /**
@@ -220,10 +221,23 @@ public:
         virtual void incidenceUpdated(const QString &uid, const QDateTime &recurrenceId) = 0;
     };
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
     /**
       Constructs an empty IncidenceBase.
+      @deprecated Use IncidenceBase(IncidenceBasePrivate *p).
     */
+    KCALENDARCORE_DEPRECATED_VERSION(5, 91, "Do not use")
     IncidenceBase();
+#else
+    IncidenceBase() = delete;
+#endif
+
+    /**
+      Constructs an empty IncidenceBase.
+      @param p (non-null) a Private data object provided by the instantiated
+      class (Event, Todo, Journal, FreeBusy).  It takes ownership of the object.
+    */
+    IncidenceBase(IncidenceBasePrivate *p);
 
     /**
       Destroys the IncidenceBase.
@@ -693,11 +707,24 @@ protected:
     */
     void customPropertyUpdated() override;
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
     /**
       Constructs an IncidenceBase as a copy of another IncidenceBase object.
       @param ib is the IncidenceBase to copy.
+      @deprecated Use IncidenceBase(const IncidenceBase &ib, IncidenceBasePrivate  *p).
     */
     IncidenceBase(const IncidenceBase &ib);
+#else
+    IncidenceBase(const IncidenceBase &) = delete;
+#endif
+
+    /**
+      Constructs an IncidenceBase as a copy of another IncidenceBase object.
+      @param ib is the IncidenceBase to copy.
+      @param p (non-null) a Private data object provided by the instantiated
+      class (Event, Todo, Journal, FreeBusy).  It takes ownership of the object.
+    */
+    IncidenceBase(const IncidenceBase &ib, IncidenceBasePrivate  *p);
 
     /**
       Provides polymorfic comparison for equality.
@@ -739,17 +766,30 @@ protected:
     */
     bool mReadOnly;
 
-private:
-    //@cond PRIVATE
-    IncidenceBasePrivate *const d;
+    Q_DECLARE_PRIVATE(IncidenceBase)
 
+protected:
+    IncidenceBasePrivate *const d_ptr;
+
+private:
     Q_DECL_HIDDEN QVariantList attendeesVariant() const;
-    //@endcond
 
     friend KCALENDARCORE_EXPORT QDataStream &operator<<(QDataStream &stream, const KCalendarCore::IncidenceBase::Ptr &);
 
     friend KCALENDARCORE_EXPORT QDataStream &operator>>(QDataStream &stream, KCalendarCore::IncidenceBase::Ptr &);
 };
+
+/**
+ * Compare two QDateTimes for extended equality.
+ *
+ * QDateTime::operator==() in Qt 5.12 returns true if its operands represent
+ * the same instant in time, regardless of their time zones or TimeSpecs (and
+ * contrary to the documentation).  This function returns true if and only if
+ * their times, time zones, and TimeSpecs are equal, or both are invalid().
+ *
+ * @since 5.93
+ */
+KCALENDARCORE_EXPORT bool identical(QDateTime, QDateTime);
 
 /**
  * Incidence serializer.

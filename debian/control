@@ -9,13 +9,13 @@ Build-Depends: bison,
                cmake (>= 3.16~),
                debhelper-compat (= 13),
                doxygen,
-               extra-cmake-modules (>= 5.90.0~),
+               extra-cmake-modules (>= 5.103.0~),
                libical-dev (>= 3.0~),
                pkg-kde-tools (>> 0.15.15),
                qhelpgenerator-qt5,
                qtbase5-dev (>= 5.15.2~),
                qttools5-dev,
-Standards-Version: 4.6.0
+Standards-Version: 4.6.2
 Rules-Requires-Root: no
 Homepage: https://invent.kde.org/frameworks/kcalendarcore
 Vcs-Browser: https://salsa.debian.org/qt-kde-team/kde/kcalcore
@@ -40,7 +40,7 @@ Description: development files for kcalcore
 Package: libkf5calendarcore-doc
 Architecture: all
 Multi-Arch: foreign
-Depends: ${misc:Depends}
+Depends: ${misc:Depends},
 Section: doc
 Description: calendar access framework (documentation)
  This library provides access to and handling of calendar data.
@@ -56,7 +56,7 @@ X-Debian-ABI: 2
 X-CMake-Target: KF5CalendarCore
 Architecture: any
 Multi-Arch: same
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends}, ${shlibs:Depends},
 Description: calendar access framework
  This library provides access to and handling of calendar data.
  It supports the standard formats iCalendar and vCalendar and the
