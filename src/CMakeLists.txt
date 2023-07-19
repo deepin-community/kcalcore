@@ -19,6 +19,8 @@ target_sources(KF5CalendarCore PRIVATE
     calendar_p.h
     calendarplugin.cpp
     calendarplugin.h
+    calendarpluginloader.cpp
+    calendarpluginloader.h
     calfilter.cpp
     calfilter.h
     calformat.cpp
@@ -101,7 +103,7 @@ ecm_generate_export_header(KF5CalendarCore
     GROUP_BASE_NAME KF
     VERSION ${KF_VERSION}
     DEPRECATED_BASE_VERSION 0
-    DEPRECATION_VERSIONS 5.64 5.89
+    DEPRECATION_VERSIONS 5.64 5.89 5.91 5.95 5.96 5.97
     EXCLUDE_DEPRECATED_BEFORE_AND_AT ${EXCLUDE_DEPRECATED_BEFORE_AND_AT}
 )
 
@@ -122,7 +124,7 @@ PRIVATE
     LibIcal
 )
 
-install(TARGETS KF5CalendarCore EXPORT KF5CalendarCoreTargets ${KF5_INSTALL_TARGETS_DEFAULT_ARGS})
+install(TARGETS KF5CalendarCore EXPORT KF5CalendarCoreTargets ${KF_INSTALL_TARGETS_DEFAULT_ARGS})
 
 ########### Generate Headers ###############
 set(kcalendarcore_headers
@@ -134,6 +136,7 @@ set(kcalendarcore_headers
   CalStorage
   Calendar
   CalendarPlugin
+  CalendarPluginLoader
   Conference
   CustomProperties
   Duration

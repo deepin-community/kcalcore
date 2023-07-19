@@ -15,10 +15,13 @@ class EventTest : public QObject
 {
     Q_OBJECT
 private Q_SLOTS:
+    void initTestCase();
+
     void testSetRoles_data();
     void testSetRoles();
     void testValidity();
     void testCompare();
+    void testDtEndEqual();
     void testCompareAlarms();
     void testClone();
     void testCopyConstructor();

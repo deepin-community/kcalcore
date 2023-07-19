@@ -26,6 +26,12 @@ private Q_SLOTS:
     void testRDate();
     void testDateTime_data();
     void testDateTime();
+    void testNotebook();
+    void testUidGeneration();
+    void testUidGenerationStability();
+    void testUidGenerationUniqueness();
+    void testIcalFormat();
+    void testNonTextCustomProperties();
 };
 
 #endif

@@ -260,14 +260,21 @@ public:
     void setAllDay(bool allDay) override;
 
     /**
-      Sets the due date/time of the current occurrence if recurrent.
+      Identify the earliest uncompleted occurrence of a recurring Todo.
 
-      @param dt is the
+      @param dt Normally, the start date-time of the occurrence.
+        For backwards compatibility, if the Todo does not have a @c dtStart()
+        then pass the occurrence's due date-time.
     */
     void setDtRecurrence(const QDateTime &dt);
 
     /**
-      Returns the due date/time of the current occurrence if recurrent.
+      Returns an identifier for the earliest uncompleted occurrence of a
+      recurring Todo.
+
+      @note
+      Do not rely on the returned value to determine whether the Todo is
+      completed; use @c isCompleted() instead.
     */
     Q_REQUIRED_RESULT QDateTime dtRecurrence() const;
 
@@ -351,13 +358,16 @@ private:
      */
     Todo &operator=(const Todo &other);
 
-    // For polymorfic serialization
+    // For polymorphic serialization
     void serialize(QDataStream &out) const override;
     void deserialize(QDataStream &in) override;
 
     //@cond PRIVATE
-    friend class TodoPrivate;
-    TodoPrivate *const d;
+    Q_DECLARE_PRIVATE(Todo)
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 91)
+    KCALENDARCORE_DEPRECATED_VERSION(5, 91, "Do not use")
+    TodoPrivate *const _ = nullptr;    // TODO KF6 remove. ABI compatibility hack.
+#endif
     //@endcond
 };
 

@@ -21,8 +21,11 @@
 
 #include <QString>
 
+#include <memory>
+
 namespace KCalendarCore
 {
+class CalFormatPrivate;
 class Exception;
 
 /**
@@ -35,10 +38,14 @@ class Exception;
 class KCALENDARCORE_EXPORT CalFormat
 {
 public:
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 96)
     /**
       Constructs a new Calendar Format object.
+      @deprecated since 5.96, unused with the move to hierarchical dptrs.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(5, 96, "unused, see API docs")
     CalFormat();
+#endif
 
     /**
       Destructor.
@@ -65,8 +72,11 @@ public:
     */
     virtual bool save(const Calendar::Ptr &calendar, const QString &fileName) = 0;
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 97)
     /**
-      Loads a calendar from a string
+      Loads a calendar from a string. When a notebook is given, incidences are added to this
+      notebook, otherwise no notebook is associated to loaded incidences. The notebook
+      should already be added to the calendar, see Calendar::addNotebook().
 
       @param calendar is the Calendar to be loaded.
       @param string is the QString containing the Calendar data.
@@ -75,8 +85,27 @@ public:
 
       @return true if successful; false otherwise.
       @see fromRawString(), toString().
+
+      @deprecated since 5.97, use fromString(const Calendar::Ptr &calendar, const QString &string, const QString &notebook) instead.
     */
-    virtual bool fromString(const Calendar::Ptr &calendar, const QString &string, bool deleted = false, const QString &notebook = QString()) = 0;
+    KCALENDARCORE_DEPRECATED_VERSION(5, 97, "use fromString(const Calendar::Ptr &calendar, const QString &string, const QString &notebook)")
+    virtual bool fromString(const Calendar::Ptr &calendar, const QString &string, bool deleted, const QString &notebook = {}) = 0;
+#endif
+    /**
+      Loads a calendar from a string. When a notebook is given, incidences are added to this
+      notebook, otherwise no notebook is associated to loaded incidences. The notebook
+      should already be added to the calendar, see Calendar::addNotebook().
+
+      @param calendar is the Calendar to be loaded.
+      @param string is the QString containing the Calendar data.
+      @param notebook notebook uid
+
+      @return true if successful; false otherwise.
+      @see fromRawString(), toString().
+
+      @since 5.97
+    */
+    bool fromString(const Calendar::Ptr &calendar, const QString &string, const QString &notebook = {});
 
     /**
       Parses a utf8 encoded string, returning the first iCal component
@@ -163,17 +192,26 @@ protected:
     */
     void setLoadedProductId(const QString &id);
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 96)
     /**
       @copydoc
       IncidenceBase::virtual_hook()
+      @deprecated since 5.96 unused, hierarchical dptrs provide the same ABI compatible extension vector
+      as this class is not intended to be inherited externally.
     */
+    KCALENDARCORE_DEPRECATED_VERSION(5, 96, "unused, see API docs")
     virtual void virtual_hook(int id, void *data);
+#endif
+
+    //@cond PRIVATE
+    CalFormat(CalFormatPrivate *dd);
+    std::unique_ptr<CalFormatPrivate> d_ptr;
+    //@endcond
 
 private:
     //@cond PRIVATE
     Q_DISABLE_COPY(CalFormat)
-    class Private;
-    Private *const d;
+    Q_DECLARE_PRIVATE(CalFormat)
     //@endcond
 };
 

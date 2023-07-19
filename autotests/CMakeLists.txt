@@ -30,6 +30,7 @@ macro_unit_tests(
   testfreebusy
   testincidencerelation
   testicalformat
+  testidentical
   testjournal
   testmemorycalendar
   testperiod
@@ -37,6 +38,7 @@ macro_unit_tests(
   testperson
   testrecurtodo
   teststartdatetimesfordate
+  teststatus
   testtodo
   testtimesininterval
   testcreateddatecompat

@@ -17,6 +17,7 @@
 */
 #include "icalformat.h"
 #include "calendar_p.h"
+#include "calformat_p.h"
 #include "icalformat_p.h"
 #include "icaltimezones_p.h"
 #include "kcalendarcore_debug.h"
@@ -37,32 +38,27 @@ extern "C" {
 using namespace KCalendarCore;
 
 //@cond PRIVATE
-class Q_DECL_HIDDEN KCalendarCore::ICalFormat::Private
+class KCalendarCore::ICalFormatPrivate : public KCalendarCore::CalFormatPrivate
 {
 public:
-    Private(ICalFormat *parent)
-        : mImpl(new ICalFormatImpl(parent))
+    ICalFormatPrivate(ICalFormat *parent)
+        : mImpl(parent)
         , mTimeZone(QTimeZone::utc())
     {
     }
-    ~Private()
-    {
-        delete mImpl;
-    }
-    ICalFormatImpl *mImpl = nullptr;
+    ICalFormatImpl mImpl;
     QTimeZone mTimeZone;
 };
 //@endcond
 
 ICalFormat::ICalFormat()
-    : d(new Private(this))
+    : CalFormat(new ICalFormatPrivate(this))
 {
 }
 
 ICalFormat::~ICalFormat()
 {
     icalmemory_free_ring();
-    delete d;
 }
 
 bool ICalFormat::load(const Calendar::Ptr &calendar, const QString &fileName)
@@ -81,6 +77,9 @@ bool ICalFormat::load(const Calendar::Ptr &calendar, const QString &fileName)
     file.close();
 
     if (!text.isEmpty()) {
+        if (!calendar->hasValidNotebook(fileName) && !calendar->addNotebook(fileName, true)) {
+            qCWarning(KCALCORE_LOG) << "Unable to add" << fileName << "as a notebook in calendar";
+        }
         if (!fromRawString(calendar, text, false, fileName)) {
             qCWarning(KCALCORE_LOG) << fileName << " is not a valid iCalendar file";
             setException(new Exception(Exception::ParseErrorIcal));
@@ -138,13 +137,17 @@ bool ICalFormat::save(const Calendar::Ptr &calendar, const QString &fileName)
     return true;
 }
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 97)
 bool ICalFormat::fromString(const Calendar::Ptr &cal, const QString &string, bool deleted, const QString &notebook)
 {
     return fromRawString(cal, string.toUtf8(), deleted, notebook);
 }
+#endif
 
 Incidence::Ptr ICalFormat::readIncidence(const QByteArray &string)
 {
+    Q_D(ICalFormat);
+
     // Let's defend const correctness until the very gates of hell^Wlibical
     icalcomponent *calendar = icalcomponent_new_from_string(const_cast<char *>(string.constData()));
     if (!calendar) {
@@ -159,11 +162,11 @@ Incidence::Ptr ICalFormat::readIncidence(const QByteArray &string)
 
     Incidence::Ptr incidence;
     if (icalcomponent_isa(calendar) == ICAL_VCALENDAR_COMPONENT) {
-        incidence = d->mImpl->readOneIncidence(calendar, &tzCache);
+        incidence = d->mImpl.readOneIncidence(calendar, &tzCache);
     } else if (icalcomponent_isa(calendar) == ICAL_XROOT_COMPONENT) {
         icalcomponent *comp = icalcomponent_get_first_component(calendar, ICAL_VCALENDAR_COMPONENT);
         if (comp) {
-            incidence = d->mImpl->readOneIncidence(comp, &tzCache);
+            incidence = d->mImpl.readOneIncidence(comp, &tzCache);
         }
     }
 
@@ -180,7 +183,8 @@ Incidence::Ptr ICalFormat::readIncidence(const QByteArray &string)
 
 bool ICalFormat::fromRawString(const Calendar::Ptr &cal, const QByteArray &string, bool deleted, const QString &notebook)
 {
-    Q_UNUSED(notebook);
+    Q_D(ICalFormat);
+
     // Get first VCALENDAR component.
     // TODO: Handle more than one VCALENDAR or non-VCALENDAR top components
     icalcomponent *calendar;
@@ -200,14 +204,14 @@ bool ICalFormat::fromRawString(const Calendar::Ptr &cal, const QByteArray &strin
         for (comp = icalcomponent_get_first_component(calendar, ICAL_VCALENDAR_COMPONENT); comp;
              comp = icalcomponent_get_next_component(calendar, ICAL_VCALENDAR_COMPONENT)) {
             // put all objects into their proper places
-            if (!d->mImpl->populate(cal, comp, deleted)) {
+            if (!d->mImpl.populate(cal, comp, deleted)) {
                 qCritical() << "Could not populate calendar";
                 if (!exception()) {
                     setException(new Exception(Exception::ParseErrorKcal));
                 }
                 success = false;
             } else {
-                setLoadedProductId(d->mImpl->loadedProductId());
+                setLoadedProductId(d->mImpl.loadedProductId());
             }
         }
     } else if (icalcomponent_isa(calendar) != ICAL_VCALENDAR_COMPONENT) {
@@ -216,14 +220,14 @@ bool ICalFormat::fromRawString(const Calendar::Ptr &cal, const QByteArray &strin
         success = false;
     } else {
         // put all objects into their proper places
-        if (!d->mImpl->populate(cal, calendar, deleted)) {
+        if (!d->mImpl.populate(cal, calendar, deleted, notebook)) {
             qCDebug(KCALCORE_LOG) << "Could not populate calendar";
             if (!exception()) {
                 setException(new Exception(Exception::ParseErrorKcal));
             }
             success = false;
         } else {
-            setLoadedProductId(d->mImpl->loadedProductId());
+            setLoadedProductId(d->mImpl.loadedProductId());
         }
     }
 
@@ -235,6 +239,8 @@ bool ICalFormat::fromRawString(const Calendar::Ptr &cal, const QByteArray &strin
 
 Incidence::Ptr ICalFormat::fromString(const QString &string)
 {
+    Q_D(ICalFormat);
+
     MemoryCalendar::Ptr cal(new MemoryCalendar(d->mTimeZone));
     fromString(cal, string);
 
@@ -244,7 +250,9 @@ Incidence::Ptr ICalFormat::fromString(const QString &string)
 
 QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, bool deleted)
 {
-    icalcomponent *calendar = d->mImpl->createCalendarComponent(cal);
+    Q_D(ICalFormat);
+
+    icalcomponent *calendar = d->mImpl.createCalendarComponent(cal);
     icalcomponent *component;
 
     QVector<QTimeZone> tzUsedList;
@@ -256,7 +264,7 @@ QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, 
         if (!deleted || !cal->todo((*it)->uid(), (*it)->recurrenceId())) {
             // use existing ones, or really deleted ones
             if (notebook.isEmpty() || (!cal->notebook(*it).isEmpty() && notebook.endsWith(cal->notebook(*it)))) {
-                component = d->mImpl->writeTodo(*it, &tzUsedList);
+                component = d->mImpl.writeTodo(*it, &tzUsedList);
                 icalcomponent_add_component(calendar, component);
                 ICalTimeZoneParser::updateTzEarliestDate((*it), &earliestTz);
             }
@@ -268,7 +276,7 @@ QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, 
         if (!deleted || !cal->event((*it)->uid(), (*it)->recurrenceId())) {
             // use existing ones, or really deleted ones
             if (notebook.isEmpty() || (!cal->notebook(*it).isEmpty() && notebook.endsWith(cal->notebook(*it)))) {
-                component = d->mImpl->writeEvent(*it, &tzUsedList);
+                component = d->mImpl.writeEvent(*it, &tzUsedList);
                 icalcomponent_add_component(calendar, component);
                 ICalTimeZoneParser::updateTzEarliestDate((*it), &earliestTz);
             }
@@ -281,7 +289,7 @@ QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, 
         if (!deleted || !cal->journal((*it)->uid(), (*it)->recurrenceId())) {
             // use existing ones, or really deleted ones
             if (notebook.isEmpty() || (!cal->notebook(*it).isEmpty() && notebook.endsWith(cal->notebook(*it)))) {
-                component = d->mImpl->writeJournal(*it, &tzUsedList);
+                component = d->mImpl.writeJournal(*it, &tzUsedList);
                 icalcomponent_add_component(calendar, component);
                 ICalTimeZoneParser::updateTzEarliestDate((*it), &earliestTz);
             }
@@ -294,7 +302,7 @@ QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, 
         // this will export a calendar having only timezone definitions
         tzUsedList = cal->d->mTimeZones;
     }
-    for (const auto &qtz : qAsConst(tzUsedList)) {
+    for (const auto &qtz : std::as_const(tzUsedList)) {
         if (qtz != QTimeZone::utc()) {
             icaltimezone *tz = ICalTimeZoneParser::icaltimezoneFromQTimeZone(qtz, earliestTz[qtz]);
             if (!tz) {
@@ -323,6 +331,8 @@ QString ICalFormat::toString(const Calendar::Ptr &cal, const QString &notebook, 
 
 QString ICalFormat::toICalString(const Incidence::Ptr &incidence)
 {
+    Q_D(ICalFormat);
+
     MemoryCalendar::Ptr cal(new MemoryCalendar(d->mTimeZone));
     cal->addIncidence(Incidence::Ptr(incidence->clone()));
     return toString(cal.staticCast<Calendar>());
@@ -335,9 +345,10 @@ QString ICalFormat::toString(const Incidence::Ptr &incidence)
 
 QByteArray ICalFormat::toRawString(const Incidence::Ptr &incidence)
 {
+    Q_D(ICalFormat);
     TimeZoneList tzUsedList;
 
-    icalcomponent *component = d->mImpl->writeIncidence(incidence, iTIPRequest, &tzUsedList);
+    icalcomponent *component = d->mImpl.writeIncidence(incidence, iTIPRequest, &tzUsedList);
 
     QByteArray text = icalcomponent_as_ical_string(component);
 
@@ -345,7 +356,7 @@ QByteArray ICalFormat::toRawString(const Incidence::Ptr &incidence)
     ICalTimeZoneParser::updateTzEarliestDate(incidence, &earliestTzDt);
 
     // time zones
-    for (const auto &qtz : qAsConst(tzUsedList)) {
+    for (const auto &qtz : std::as_const(tzUsedList)) {
         if (qtz != QTimeZone::utc()) {
             icaltimezone *tz = ICalTimeZoneParser::icaltimezoneFromQTimeZone(qtz, earliestTzDt[qtz]);
             if (!tz) {
@@ -366,14 +377,25 @@ QByteArray ICalFormat::toRawString(const Incidence::Ptr &incidence)
 
 QString ICalFormat::toString(RecurrenceRule *recurrence)
 {
-    icalproperty *property = icalproperty_new_rrule(d->mImpl->writeRecurrenceRule(recurrence));
+    Q_D(ICalFormat);
+    icalproperty *property = icalproperty_new_rrule(d->mImpl.writeRecurrenceRule(recurrence));
     QString text = QString::fromUtf8(icalproperty_as_ical_string(property));
     icalproperty_free(property);
     return text;
 }
 
+QString KCalendarCore::ICalFormat::toString(const KCalendarCore::Duration &duration) const
+{
+    Q_D(const ICalFormat);
+    const auto icalDuration = d->mImpl.writeICalDuration(duration);
+    // contrary to the libical API docs, the returned string is actually freed by icalmemory_free_ring,
+    // freeing it here explicitly causes a double deletion failure
+    return QString::fromUtf8(icaldurationtype_as_ical_string(icalDuration));
+}
+
 bool ICalFormat::fromString(RecurrenceRule *recurrence, const QString &rrule)
 {
+    Q_D(ICalFormat);
     if (!recurrence) {
         return false;
     }
@@ -386,14 +408,27 @@ bool ICalFormat::fromString(RecurrenceRule *recurrence, const QString &rrule)
     }
 
     if (success) {
-        d->mImpl->readRecurrence(recur, recurrence);
+        d->mImpl.readRecurrence(recur, recurrence);
     }
 
     return success;
 }
 
+Duration ICalFormat::durationFromString(const QString &duration) const
+{
+    Q_D(const ICalFormat);
+    icalerror_clear_errno();
+    const auto icalDuration = icaldurationtype_from_string(duration.toUtf8().constData());
+    if (icalerrno != ICAL_NO_ERROR) {
+        qCDebug(KCALCORE_LOG) << "Duration parsing error:" << icalerror_strerror(icalerrno);
+        return {};
+    }
+    return d->mImpl.readICalDuration(icalDuration);
+}
+
 QString ICalFormat::createScheduleMessage(const IncidenceBase::Ptr &incidence, iTIPMethod method)
 {
+    Q_D(ICalFormat);
     icalcomponent *message = nullptr;
 
     if (incidence->type() == Incidence::TypeEvent || incidence->type() == Incidence::TypeTodo) {
@@ -423,12 +458,12 @@ QString ICalFormat::createScheduleMessage(const IncidenceBase::Ptr &incidence, i
             }
 
             // Build the message with the cloned incidence
-            message = d->mImpl->createScheduleComponent(i, method);
+            message = d->mImpl.createScheduleComponent(i, method);
         }
     }
 
     if (message == nullptr) {
-        message = d->mImpl->createScheduleComponent(incidence, method);
+        message = d->mImpl.createScheduleComponent(incidence, method);
     }
 
     QString messageText = QString::fromUtf8(icalcomponent_as_ical_string(message));
@@ -439,6 +474,7 @@ QString ICalFormat::createScheduleMessage(const IncidenceBase::Ptr &incidence, i
 
 FreeBusy::Ptr ICalFormat::parseFreeBusy(const QString &str)
 {
+    Q_D(ICalFormat);
     clearException();
 
     icalcomponent *message = icalparser_parse_string(str.toUtf8().constData());
@@ -452,7 +488,7 @@ FreeBusy::Ptr ICalFormat::parseFreeBusy(const QString &str)
     icalcomponent *c = nullptr;
     for (c = icalcomponent_get_first_component(message, ICAL_VFREEBUSY_COMPONENT); c != nullptr;
          c = icalcomponent_get_next_component(message, ICAL_VFREEBUSY_COMPONENT)) {
-        FreeBusy::Ptr fb = d->mImpl->readFreeBusy(c);
+        FreeBusy::Ptr fb = d->mImpl.readFreeBusy(c);
 
         if (freeBusy) {
             freeBusy->merge(fb);
@@ -472,6 +508,7 @@ FreeBusy::Ptr ICalFormat::parseFreeBusy(const QString &str)
 
 ScheduleMessage::Ptr ICalFormat::parseScheduleMessage(const Calendar::Ptr &cal, const QString &messageText)
 {
+    Q_D(ICalFormat);
     setTimeZone(cal->timeZone());
     clearException();
 
@@ -503,27 +540,27 @@ ScheduleMessage::Ptr ICalFormat::parseScheduleMessage(const Calendar::Ptr &cal, 
     IncidenceBase::Ptr incidence;
     icalcomponent *c = icalcomponent_get_first_component(message, ICAL_VEVENT_COMPONENT);
     if (c) {
-        incidence = d->mImpl->readEvent(c, &tzlist).staticCast<IncidenceBase>();
+        incidence = d->mImpl.readEvent(c, &tzlist).staticCast<IncidenceBase>();
     }
 
     if (!incidence) {
         c = icalcomponent_get_first_component(message, ICAL_VTODO_COMPONENT);
         if (c) {
-            incidence = d->mImpl->readTodo(c, &tzlist).staticCast<IncidenceBase>();
+            incidence = d->mImpl.readTodo(c, &tzlist).staticCast<IncidenceBase>();
         }
     }
 
     if (!incidence) {
         c = icalcomponent_get_first_component(message, ICAL_VJOURNAL_COMPONENT);
         if (c) {
-            incidence = d->mImpl->readJournal(c, &tzlist).staticCast<IncidenceBase>();
+            incidence = d->mImpl.readJournal(c, &tzlist).staticCast<IncidenceBase>();
         }
     }
 
     if (!incidence) {
         c = icalcomponent_get_first_component(message, ICAL_VFREEBUSY_COMPONENT);
         if (c) {
-            incidence = d->mImpl->readFreeBusy(c).staticCast<IncidenceBase>();
+            incidence = d->mImpl.readFreeBusy(c).staticCast<IncidenceBase>();
         }
     }
 
@@ -570,24 +607,24 @@ ScheduleMessage::Ptr ICalFormat::parseScheduleMessage(const Calendar::Ptr &cal, 
 
     if (!icalrestriction_check(message)) {
         qCWarning(KCALCORE_LOG) << "\nkcalcore library reported a problem while parsing:";
-        qCWarning(KCALCORE_LOG) << ScheduleMessage::methodName(method) << ":" << d->mImpl->extractErrorProperty(c);
+        qCWarning(KCALCORE_LOG) << ScheduleMessage::methodName(method) << ":" << d->mImpl.extractErrorProperty(c);
     }
 
     Incidence::Ptr existingIncidence = cal->incidence(incidence->uid());
 
     icalcomponent *calendarComponent = nullptr;
     if (existingIncidence) {
-        calendarComponent = d->mImpl->createCalendarComponent(cal);
+        calendarComponent = d->mImpl.createCalendarComponent(cal);
 
         // TODO: check, if cast is required, or if it can be done by virtual funcs.
         // TODO: Use a visitor for this!
         if (existingIncidence->type() == Incidence::TypeTodo) {
             Todo::Ptr todo = existingIncidence.staticCast<Todo>();
-            icalcomponent_add_component(calendarComponent, d->mImpl->writeTodo(todo));
+            icalcomponent_add_component(calendarComponent, d->mImpl.writeTodo(todo));
         }
         if (existingIncidence->type() == Incidence::TypeEvent) {
             Event::Ptr event = existingIncidence.staticCast<Event>();
-            icalcomponent_add_component(calendarComponent, d->mImpl->writeEvent(event));
+            icalcomponent_add_component(calendarComponent, d->mImpl.writeEvent(event));
         }
     } else {
         icalcomponent_free(message);
@@ -628,22 +665,27 @@ ScheduleMessage::Ptr ICalFormat::parseScheduleMessage(const Calendar::Ptr &cal, 
 
 void ICalFormat::setTimeZone(const QTimeZone &timeZone)
 {
+    Q_D(ICalFormat);
     d->mTimeZone = timeZone;
 }
 
 QTimeZone ICalFormat::timeZone() const
 {
+    Q_D(const ICalFormat);
     return d->mTimeZone;
 }
 
 QByteArray ICalFormat::timeZoneId() const
 {
+    Q_D(const ICalFormat);
     return d->mTimeZone.id();
 }
 
+#if KCALENDARCORE_BUILD_DEPRECATED_SINCE(5, 96)
 void ICalFormat::virtual_hook(int id, void *data)
 {
     Q_UNUSED(id);
     Q_UNUSED(data);
     Q_ASSERT(false);
 }
+#endif

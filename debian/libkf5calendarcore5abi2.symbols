@@ -219,9 +219,13 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore13IncidenceBase6updateEv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore13IncidenceBase7updatedEv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore13IncidenceBase9setAllDayEb@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore13IncidenceBaseC1EPNS_20IncidenceBasePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore13IncidenceBaseC1ERKS0_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore13IncidenceBaseC1ERKS0_PNS_20IncidenceBasePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore13IncidenceBaseC1Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore13IncidenceBaseC2EPNS_20IncidenceBasePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore13IncidenceBaseC2ERKS0_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore13IncidenceBaseC2ERKS0_PNS_20IncidenceBasePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore13IncidenceBaseC2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore13IncidenceBaseD0Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore13IncidenceBaseD1Ev@ABI_5_2 5:5.67.0
@@ -335,6 +339,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore16CustomPropertiesD1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore16CustomPropertiesD2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore16CustomPropertiesaSERKS0_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore16staticMetaObjectE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore17ICalTimeZoneCache6insertERK10QByteArrayRKNS_12ICalTimeZoneE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore17ICalTimeZoneCacheC1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore17ICalTimeZoneCacheC2Ev@ABI_5_2 5:5.67.0
@@ -355,6 +360,9 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore18OccurrenceIteratorC2ERKNS_8CalendarERK9QDateTimeS6_@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore18OccurrenceIteratorD1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore18OccurrenceIteratorD2Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore20CalendarPluginLoader16staticMetaObjectE@ABI_5_2 5:5.97.0
+ _ZN13KCalendarCore20CalendarPluginLoader6pluginEv@ABI_5_2 5:5.97.0
+ _ZN13KCalendarCore20CalendarPluginLoader9hasPluginEv@ABI_5_2 5:5.97.0
  _ZN13KCalendarCore31deserializeKDateTimeAsQDateTimeER11QDataStream@ABI_5_2 5:5.85.0
  _ZN13KCalendarCore31deserializeKDateTimeAsQDateTimeER11QDataStreamR9QDateTime@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore4Todo10shiftTimesERK9QTimeZoneS3_@ABI_5_2 5:5.67.0
@@ -532,6 +540,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore8AttendeeaSERKS0_@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar10duplicatesERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar10shiftTimesERK9QTimeZoneS3_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore8Calendar10sortEventsEO7QVectorI14QSharedPointerINS_5EventEEENS_14EventSortFieldENS_13SortDirectionE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore8Calendar10sortEventsERK7QVectorI14QSharedPointerINS_5EventEEENS_14EventSortFieldENS_13SortDirectionE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar11addNotebookERK7QStringb@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar11beginChangeERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
@@ -544,7 +553,9 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore8Calendar11setTimeZoneERK9QTimeZone@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar12addIncidenceERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar12ownerChangedEv@ABI_5_2 5:5.85.0
+ _ZN13KCalendarCore8Calendar12setIsLoadingEb@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore8Calendar12setProductIdERK7QString@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore8Calendar12sortJournalsEO7QVectorI14QSharedPointerINS_7JournalEEENS_16JournalSortFieldENS_13SortDirectionE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore8Calendar12sortJournalsERK7QVectorI14QSharedPointerINS_7JournalEEENS_16JournalSortFieldENS_13SortDirectionE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar12virtual_hookEiPv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar13doSetTimeZoneERK9QTimeZone@ABI_5_2 5:5.67.0
@@ -568,6 +579,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore8Calendar16CalendarObserverD1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar16CalendarObserverD2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar16incidenceUpdatedERK7QStringRK9QDateTime@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore8Calendar16isLoadingChangedEv@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore8Calendar16registerObserverEPNS0_16CalendarObserverE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar16startBatchAddingEv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar16staticMetaObjectE@ABI_5_2 5:5.67.0
@@ -593,6 +605,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore8Calendar9endChangeERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8Calendar9idChangedEv@ABI_5_2 5:5.85.0
  _ZN13KCalendarCore8Calendar9setFilterEPNS_9CalFilterE@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore8Calendar9sortTodosEO7QVectorI14QSharedPointerINS_4TodoEEENS_13TodoSortFieldENS_13SortDirectionE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore8Calendar9sortTodosERK7QVectorI14QSharedPointerINS_4TodoEEENS_13TodoSortFieldENS_13SortDirectionE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8CalendarC1ERK10QByteArray@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore8CalendarC1ERK9QTimeZone@ABI_5_2 5:5.67.0
@@ -663,6 +676,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore9CalFilterC2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFilterD1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFilterD2Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9CalFormat10fromStringERK14QSharedPointerINS_8CalendarEERK7QStringS8_@ABI_5_2 5:5.97.0
  _ZN13KCalendarCore9CalFormat11applicationEv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormat12setExceptionEPNS_9ExceptionE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormat12virtual_hookEiPv@ABI_5_2 5:5.67.0
@@ -672,7 +686,9 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore9CalFormat15loadedProductIdEv@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormat18setLoadedProductIdERK7QString@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormat9productIdEv@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9CalFormatC1EPNS_16CalFormatPrivateE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore9CalFormatC1Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9CalFormatC2EPNS_16CalFormatPrivateE@ABI_5_2 5:5.96.0
  _ZN13KCalendarCore9CalFormatC2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormatD0Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9CalFormatD1Ev@ABI_5_2 5:5.67.0
@@ -729,13 +745,18 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCore9Incidence9setAllDayEb@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9Incidence9setHasGeoEb@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9Incidence9setStatusENS0_6StatusE@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9IncidenceC1EPNS_16IncidencePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore9IncidenceC1ERKS0_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9IncidenceC1ERKS0_PNS_16IncidencePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore9IncidenceC1Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9IncidenceC2EPNS_16IncidencePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore9IncidenceC2ERKS0_@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9IncidenceC2ERKS0_PNS_16IncidencePrivateE@ABI_5_2 5:5.92.0
  _ZN13KCalendarCore9IncidenceC2Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9IncidenceD0Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9IncidenceD1Ev@ABI_5_2 5:5.67.0
  _ZN13KCalendarCore9IncidenceD2Ev@ABI_5_2 5:5.67.0
+ _ZN13KCalendarCore9identicalE9QDateTimeS0_@ABI_5_2 5:5.93.0
  _ZN13KCalendarCorelsER11QDataStreamPKNS_14RecurrenceRuleE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCorelsER11QDataStreamPNS_10RecurrenceE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCorelsER11QDataStreamRK14QSharedPointerINS_13IncidenceBaseEE@ABI_5_2 5:5.67.0
@@ -764,6 +785,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZN13KCalendarCorersER11QDataStreamRNS_6PersonE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCorersER11QDataStreamRNS_8AttendeeE@ABI_5_2 5:5.67.0
  _ZN13KCalendarCorersER11QDataStreamRNS_8DurationE@ABI_5_2 5:5.67.0
+ _ZN9QBitArray6setBitEi@ABI_5_2 5:5.93.0
  _ZNK13KCalendarCore10Attachment10showInlineEv@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore10Attachment11decodedDataEv@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore10Attachment3uriEv@ABI_5_2 5:5.67.0
@@ -788,7 +810,9 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZNK13KCalendarCore10ConferenceeqERKS0_@ABI_5_2 5:5.77.0
  _ZNK13KCalendarCore10ConferenceneERKS0_@ABI_5_2 5:5.77.0
  _ZNK13KCalendarCore10ICalFormat10timeZoneIdEv@ABI_5_2 5:5.67.0
+ _ZNK13KCalendarCore10ICalFormat18durationFromStringERK7QString@ABI_5_2 5:5.96.0
  _ZNK13KCalendarCore10ICalFormat8timeZoneEv@ABI_5_2 5:5.67.0
+ _ZNK13KCalendarCore10ICalFormat8toStringERKNS_8DurationE@ABI_5_2 5:5.96.0
  _ZNK13KCalendarCore10Recurrence10durationToERK5QDate@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore10Recurrence10durationToERK9QDateTime@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore10Recurrence10rDateTimesEv@ABI_5_2 5:5.67.0
@@ -1079,6 +1103,7 @@ libKF5CalendarCore.so.5abi2 libkf5calendarcore5abi2 #MINVER#
  _ZNK13KCalendarCore8Calendar8timeZoneEv@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore8Calendar9incidenceERK7QStringRK9QDateTime@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore8Calendar9instancesERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
+ _ZNK13KCalendarCore8Calendar9isLoadingEv@ABI_5_2 5:5.96.0
  _ZNK13KCalendarCore8Calendar9isVisibleERK14QSharedPointerINS_9IncidenceEE@ABI_5_2 5:5.67.0
  _ZNK13KCalendarCore8Calendar9isVisibleERK7QString@ABI_5_2 5:5.69.0
  _ZNK13KCalendarCore8Calendar9notebooksEv@ABI_5_2 5:5.67.0
